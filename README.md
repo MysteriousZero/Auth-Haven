@@ -52,6 +52,15 @@ The application will be available at [http://localhost:8080](http://localhost:80
 
 ---
 
+## Testing
+
+For comprehensive test coverage status and production readiness assessment, please refer to:
+**[tests.md](./tests.md)** - Complete test coverage analysis across all architectural layers
+
+**Current Status**: Repository layer has basic CRUD coverage but **missing critical transaction and rollback testing**.
+
+---
+
 ## Project Structure
 
 *   `api/proto/`: Source Protobuf definitions.
@@ -59,3 +68,4 @@ The application will be available at [http://localhost:8080](http://localhost:80
 *   `internal/`: Private application code (Repositories, Services, Handlers).
 *   `pkg/proto/`: Generated gRPC and Protobuf code.
 *   `spec/`: Core specifications (DB, Domain, gRPC, REST, Security).
+*   `test/`: Comprehensive test suite including repository and integration tests.
