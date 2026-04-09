@@ -1,0 +1,1439 @@
+openapi: 3.0.3
+
+info:
+  title: Auth Haven REST API
+  description: REST API for browser UI clients. Handles authentication, registration, and user management.
+  version: 1.0.0
+
+servers:
+  - url: https://api.auth-haven.com/v1
+
+security:
+  - BearerAuth: []
+
+components:
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantID:
+      name: tenant_id
+      in: query
+      required: true
+      schema:
+        type: string
+
+  schemas:
+
+    # -------------------------
+    # Common
+    # -------------------------
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: ErrInvalidCredentials
+        message:
+          type: string
+          example: Invalid email or password
+
+    # -------------------------
+    # Tenant
+    # -------------------------
+
+    Tenant:
+      type: object
+      properties:
+        tenant_id:
+          type: string
+        name:
+          type: string
+        domain:
+          type: string
+          nullable: true
+        type:
+          type: integer
+          description: 1=organization, 2=personal
+        status:
+          type: integer
+          description: 1=active, 2=suspended, 3=deleted
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # -------------------------
+    # User
+    # -------------------------
+
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+        tenant_id:
+          type: string
+        role_id:
+          type: integer
+          format: int64
+          nullable: true
+        email:
+          type: string
+        full_name:
+          type: string
+        status:
+          type: integer
+          description: 1=active, 2=pending, 3=disabled
+        created_at:
+          type: string
+          format: date-time
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # -------------------------
+    # Auth
+    # -------------------------
+
+    LoginRequest:
+      type: object
+      required: [tenant_id, email, password]
+      properties:
+        tenant_id:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        mfa_required:
+          type: boolean
+        temp_token:
+          type: string
+          nullable: true
+          description: Populated only when mfa_required is true
+        access_token:
+          type: string
+          nullable: true
+          description: Populated only when mfa_required is false
+        refresh_token:
+          type: string
+          nullable: true
+          description: Populated only when mfa_required is false
+        session_id:
+          type: string
+          nullable: true
+          description: Populated only when mfa_required is false
+
+    VerifyMFARequest:
+      type: object
+      required: [temp_token, code]
+      properties:
+        temp_token:
+          type: string
+        code:
+          type: string
+
+    TokenPair:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    # -------------------------
+    # Registration
+    # -------------------------
+
+    RegisterIndividualRequest:
+      type: object
+      required: [email, password, full_name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        full_name:
+          type: string
+
+    RegisterOrgUserRequest:
+      type: object
+      required: [email, password, full_name]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        full_name:
+          type: string
+
+    RegisterWithInvitationRequest:
+      type: object
+      required: [invitation_token, password, full_name]
+      properties:
+        invitation_token:
+          type: string
+        password:
+          type: string
+          format: password
+        full_name:
+          type: string
+
+    # -------------------------
+    # Password
+    # -------------------------
+
+    RequestPasswordResetRequest:
+      type: object
+      required: [tenant_id, email]
+      properties:
+        tenant_id:
+          type: string
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+        new_password:
+          type: string
+          format: password
+
+    ChangePasswordRequest:
+      type: object
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          format: password
+        new_password:
+          type: string
+          format: password
+
+    # -------------------------
+    # MFA
+    # -------------------------
+
+    TOTPEnrollmentResponse:
+      type: object
+      properties:
+        mfa_id:
+          type: string
+        secret:
+          type: string
+        qr_code_url:
+          type: string
+
+    ActivateTOTPRequest:
+      type: object
+      required: [mfa_id, code]
+      properties:
+        mfa_id:
+          type: string
+        code:
+          type: string
+
+    EnrollSMSRequest:
+      type: object
+      required: [phone_number]
+      properties:
+        phone_number:
+          type: string
+
+    ActivateSMSRequest:
+      type: object
+      required: [mfa_id, code]
+      properties:
+        mfa_id:
+          type: string
+        code:
+          type: string
+
+    MFAMethod:
+      type: object
+      properties:
+        mfa_id:
+          type: string
+        type:
+          type: integer
+          description: 1=TOTP, 2=SMS, 3=Email
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    # -------------------------
+    # Sessions & Devices
+    # -------------------------
+
+    Session:
+      type: object
+      properties:
+        session_id:
+          type: string
+        device_id:
+          type: string
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    Device:
+      type: object
+      properties:
+        device_id:
+          type: string
+        device_name:
+          type: string
+        last_seen_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    # -------------------------
+    # Roles & Permissions
+    # -------------------------
+
+    Role:
+      type: object
+      properties:
+        role_id:
+          type: integer
+          format: int64
+        tenant_id:
+          type: string
+        name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    CreateRoleRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    SetPermissionsRequest:
+      type: object
+      required: [permission_keys]
+      properties:
+        permission_keys:
+          type: array
+          items:
+            type: string
+
+    # -------------------------
+    # Invitations
+    # -------------------------
+
+    Invitation:
+      type: object
+      properties:
+        invitation_id:
+          type: string
+        tenant_id:
+          type: string
+        role_id:
+          type: integer
+          format: int64
+        email:
+          type: string
+        status:
+          type: integer
+          description: 1=pending, 2=accepted, 3=expired
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    SendInvitationRequest:
+      type: object
+      required: [email, role_id]
+      properties:
+        email:
+          type: string
+          format: email
+        role_id:
+          type: integer
+          format: int64
+
+    # -------------------------
+    # Audit
+    # -------------------------
+
+    AuditLog:
+      type: object
+      properties:
+        log_id:
+          type: string
+        user_id:
+          type: string
+        tenant_id:
+          type: string
+        action:
+          type: string
+        ip_address:
+          type: string
+        user_agent:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    PaginatedAuditLogs:
+      type: object
+      properties:
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+
+# ==========================================
+# PATHS
+# ==========================================
+
+paths:
+
+  # -------------------------
+  # Auth
+  # -------------------------
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful or MFA required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: User or tenant disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/mfa/verify:
+    post:
+      tags: [Auth]
+      summary: Verify MFA code and complete login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyMFARequest'
+      responses:
+        '200':
+          description: MFA verified, tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid or expired temp token or MFA code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout current session
+      responses:
+        '204':
+          description: Logged out successfully
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Logout all sessions for current user
+      responses:
+        '204':
+          description: All sessions revoked
+
+  /auth/token/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: New token pair issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Registration
+  # -------------------------
+
+  /auth/register/individual:
+    post:
+      tags: [Registration]
+      summary: Register as an individual user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterIndividualRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register/org:
+    post:
+      tags: [Registration]
+      summary: Register as an organization user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterOrgUserRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Public domain not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Tenant suspended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already registered in this tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/register/invitation:
+    post:
+      tags: [Registration]
+      summary: Register via invitation token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterWithInvitationRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid or expired invitation token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email already registered in this tenant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Password
+  # -------------------------
+
+  /auth/password/forgot:
+    post:
+      tags: [Password]
+      summary: Request a password reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPasswordResetRequest'
+      responses:
+        '204':
+          description: Always returns success to prevent enumeration
+
+  /auth/password/reset:
+    post:
+      tags: [Password]
+      summary: Reset password using token from email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '204':
+          description: Password reset successfully
+        '400':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Password too weak
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/password/change:
+    post:
+      tags: [Password]
+      summary: Change password for authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed successfully
+        '401':
+          description: Current password incorrect
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: New password too weak
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # MFA
+  # -------------------------
+
+  /me/mfa:
+    get:
+      tags: [MFA]
+      summary: List MFA methods for current user
+      responses:
+        '200':
+          description: List of MFA methods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MFAMethod'
+
+  /me/mfa/totp/enroll:
+    post:
+      tags: [MFA]
+      summary: Enroll TOTP MFA method
+      responses:
+        '200':
+          description: TOTP enrollment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TOTPEnrollmentResponse'
+
+  /me/mfa/totp/activate:
+    post:
+      tags: [MFA]
+      summary: Activate TOTP after verifying code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateTOTPRequest'
+      responses:
+        '204':
+          description: TOTP activated
+        '400':
+          description: Invalid MFA code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/mfa/sms/enroll:
+    post:
+      tags: [MFA]
+      summary: Enroll SMS MFA method
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnrollSMSRequest'
+      responses:
+        '204':
+          description: SMS enrollment initiated, OTP sent
+
+  /me/mfa/sms/activate:
+    post:
+      tags: [MFA]
+      summary: Activate SMS MFA after verifying OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActivateSMSRequest'
+      responses:
+        '204':
+          description: SMS MFA activated
+        '400':
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/mfa/{mfa_id}:
+    delete:
+      tags: [MFA]
+      summary: Disable and remove an MFA method
+      parameters:
+        - name: mfa_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: MFA method removed
+        '404':
+          description: MFA method not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Profile
+  # -------------------------
+
+  /me:
+    get:
+      tags: [Profile]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+    patch:
+      tags: [Profile]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name:
+                  type: string
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  # -------------------------
+  # Sessions
+  # -------------------------
+
+  /me/sessions:
+    get:
+      tags: [Sessions]
+      summary: List active sessions for current user
+      responses:
+        '200':
+          description: List of sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Session'
+
+  /me/sessions/{session_id}:
+    delete:
+      tags: [Sessions]
+      summary: Revoke a specific session
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Session revoked
+        '403':
+          description: Session does not belong to current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Devices
+  # -------------------------
+
+  /me/devices:
+    get:
+      tags: [Devices]
+      summary: List devices for current user
+      responses:
+        '200':
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+
+  /me/devices/{device_id}:
+    delete:
+      tags: [Devices]
+      summary: Remove a device
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Device removed
+        '403':
+          description: Device does not belong to current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Users (Admin)
+  # -------------------------
+
+  /tenants/{tenant_id}/users:
+    get:
+      tags: [Users]
+      summary: List users in a tenant (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants/{tenant_id}/users/{user_id}:
+    get:
+      tags: [Users]
+      summary: Get a user by ID (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants/{tenant_id}/users/{user_id}/status:
+    patch:
+      tags: [Users]
+      summary: Update user status (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: integer
+                  description: 1=active, 2=pending, 3=disabled
+      responses:
+        '204':
+          description: Status updated
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants/{tenant_id}/users/{user_id}/role:
+    patch:
+      tags: [Users]
+      summary: Assign role to user (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role_id]
+              properties:
+                role_id:
+                  type: integer
+                  format: int64
+      responses:
+        '204':
+          description: Role assigned
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Role not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Roles
+  # -------------------------
+
+  /tenants/{tenant_id}/roles:
+    get:
+      tags: [Roles]
+      summary: List roles in a tenant
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+
+    post:
+      tags: [Roles]
+      summary: Create a new role (owner only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoleRequest'
+      responses:
+        '201':
+          description: Role created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants/{tenant_id}/roles/{role_id}:
+    delete:
+      tags: [Roles]
+      summary: Delete a role (owner only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Role deleted
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Role is still assigned to users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants/{tenant_id}/roles/{role_id}/permissions:
+    get:
+      tags: [Roles]
+      summary: Get permissions for a role
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: List of permission keys
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+    put:
+      tags: [Roles]
+      summary: Set permissions for a role (owner only) — replaces all existing
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: role_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPermissionsRequest'
+      responses:
+        '204':
+          description: Permissions updated
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Invitations
+  # -------------------------
+
+  /tenants/{tenant_id}/invitations:
+    get:
+      tags: [Invitations]
+      summary: List invitations for a tenant (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Invitation'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags: [Invitations]
+      summary: Send an invitation (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendInvitationRequest'
+      responses:
+        '201':
+          description: Invitation sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invitation'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: User already a member
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants/{tenant_id}/invitations/{invitation_id}/revoke:
+    post:
+      tags: [Invitations]
+      summary: Revoke a pending invitation (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: invitation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Invitation revoked
+        '400':
+          description: Invitation already accepted or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Invitation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tenants/{tenant_id}/invitations/{invitation_id}/resend:
+    post:
+      tags: [Invitations]
+      summary: Resend a pending invitation email (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: invitation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Invitation resent
+        '400':
+          description: Invitation not in pending status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------------
+  # Audit Logs
+  # -------------------------
+
+  /tenants/{tenant_id}/audit-logs:
+    get:
+      tags: [Audit]
+      summary: List audit logs for a tenant (admin only)
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogs'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/audit-logs:
+    get:
+      tags: [Audit]
+      summary: List audit logs for current user
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogs'

@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package common;
+option go_package = "auth-haven/pkg/proto/common";
+
+message Tokens {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message InviteToken {
+  string invitation_token = 1;
+}

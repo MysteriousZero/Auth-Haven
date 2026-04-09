@@ -1,0 +1,134 @@
+erDiagram
+
+    %% ============================
+    %% TABLES
+    %% ============================
+
+    tenants {
+        string tenant_id PK
+        string name
+        string domain "nullable; NULL for personal tenant"
+        smallint type "1=organization, 2=personal"
+        smallint status "1=active, 2=suspended, 3=deleted"
+        datetime created_at
+        datetime updated_at
+    }
+
+    users {
+        string user_id PK
+        string tenant_id FK
+        int64 role_id FK "nullable; NULL for personal tenant users"
+        string email
+        string password_hash
+        string full_name
+        smallint status "1=active, 2=pending, 3=disabled"
+        datetime created_at
+        datetime updated_at
+        datetime last_login_at "nullable"
+    }
+
+    roles {
+        int64 role_id PK
+        string tenant_id FK
+        string name
+        datetime created_at
+    }
+
+    role_permissions {
+        int64 role_id FK
+        string permission_key
+    }
+
+    refresh_tokens {
+        string token_id PK
+        string user_id FK
+        string token_hash
+        string user_agent
+        string ip_address
+        bool revoked
+        datetime expires_at
+        datetime created_at
+    }
+
+    sessions {
+        string session_id PK
+        string user_id FK
+        string device_id FK
+        string ip_address
+        string user_agent
+        datetime created_at
+        datetime expires_at
+    }
+
+    devices {
+        string device_id PK
+        string user_id FK
+        string device_name
+        datetime last_seen_at
+        datetime created_at
+    }
+
+    user_mfa_methods {
+        string mfa_id PK
+        string user_id FK
+        smallint type "1=TOTP, 2=SMS, 3=Email"
+        string secret "nullable; TOTP only"
+        string phone_number "nullable; SMS only"
+        bool enabled
+        datetime created_at
+    }
+
+    password_resets {
+        string reset_id PK
+        string user_id FK
+        string token_hash
+        smallint status "1=pending, 2=used, 3=expired"
+        datetime expires_at
+        datetime created_at
+    }
+
+    invitations {
+        string invitation_id PK
+        string tenant_id FK "org tenants only"
+        int64 role_id FK
+        string email
+        string token_hash
+        smallint status "1=pending, 2=accepted, 3=expired"
+        datetime expires_at
+        datetime created_at
+    }
+
+    audit_logs {
+        string log_id PK
+        string user_id FK
+        string tenant_id FK
+        string action
+        string target_id "nullable"
+        string metadata "nullable"
+        string ip_address
+        string user_agent
+        datetime created_at
+    }
+
+
+    %% ============================
+    %% RELATIONSHIPS
+    %% ============================
+
+    tenants ||--o{ users : "has"
+    tenants ||--o{ roles : "defines"
+    tenants ||--o{ invitations : "issues"
+    tenants ||--o{ audit_logs : "context"
+
+    roles ||--o{ users : "assigned to"
+    roles ||--o{ role_permissions : "has"
+    roles ||--o{ invitations : "assigns"
+
+    users ||--o{ refresh_tokens : "has"
+    users ||--o{ sessions : "creates"
+    users ||--o{ devices : "uses"
+    users ||--o{ user_mfa_methods : "configures"
+    users ||--o{ password_resets : "requests"
+    users ||--o{ audit_logs : "generates"
+
+    sessions }o--|| devices : "on"

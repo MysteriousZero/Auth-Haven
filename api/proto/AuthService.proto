@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package auth;
+option go_package = "auth-haven/pkg/proto";
+
+import "common/Tokens.proto";
+
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc VerifyMFA(VerifyMFARequest) returns (LoginResponse);
+  rpc RefreshToken(RefreshTokenRequest) returns (common.Tokens);
+  rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+  rpc IntrospectToken(IntrospectTokenRequest) returns (IntrospectTokenResponse);
+}
+
+// Login
+message LoginRequest {
+  string tenant_id = 1;
+  string email = 2;
+  string password = 3;
+}
+
+// Verify MFA
+message VerifyMFARequest {
+  string temp_token = 1;
+  string code = 2;
+}
+
+// Login Response (handles both success and MFA required)
+message LoginResponse {
+  bool mfa_required = 1;
+  string temp_token = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  string session_id = 5;
+}
+
+// Refresh
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// Password reset request
+message RequestPasswordResetRequest {
+  string tenant_id = 1;
+  string email = 2;
+}
+
+// Password reset
+message ResetPasswordRequest {
+  string token = 1;
+  string new_password = 2;
+}
+
+
+message RevokeTokenRequest {
+  string refresh_token = 1;
+}
+
+message IntrospectTokenRequest {
+  string token = 1; // could be access or refresh token
+}
+
+message RequestPasswordResetResponse {
+  bool success = 1;
+}
+
+
+message ResetPasswordResponse {
+  bool success = 1;
+}
+
+message RevokeTokenResponse {
+  bool success = 1;
+}
+
+message IntrospectTokenResponse {
+  bool active = 1;
+  string user_id = 2;
+  string tenant_id = 3;
+  repeated string roles = 4;
+  int64 expires_at = 5;
+}

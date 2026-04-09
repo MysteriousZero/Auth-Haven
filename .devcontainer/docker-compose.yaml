@@ -1,0 +1,38 @@
+services:
+  auth-haven-dev:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+
+    volumes:
+      - ..:/workspace:cached
+      - go-mod-cache:/go/pkg/mod
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    command: sleep infinity
+    tty: true
+
+    environment:
+      - DEBIAN_FRONTEND=noninteractive
+      - GOPATH=/go
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.UTF-8
+      - OPENAI_BASE_URL=http://model-runner.docker.internal/engines/llama.cpp/v1
+      - MODEL_NAME=gemma3
+      # Testcontainers — tell it where the Docker socket is inside the container
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
+      # Stops testcontainers from trying to pull Ryuk over the network on every run
+      - TESTCONTAINERS_RYUK_DISABLED=false
+
+    mem_limit: 4g
+    cpus: "2"
+    networks:
+      - devcontainer-network
+
+volumes:
+  go-mod-cache:
+
+networks:
+  devcontainer-network:
+    driver: bridge

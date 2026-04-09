@@ -1,0 +1,41 @@
+{
+  "name": "Go Dev Container",
+  "dockerComposeFile": "docker-compose.yaml",
+  "service": "auth-haven-dev",
+  "workspaceFolder": "/workspace",
+  "remoteUser": "devuser",
+  "postCreateCommand": "go mod tidy",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "z01.protobuf-helper",
+        "mermaidchart.vscode-mermaid-chart"
+      ],
+      "settings": {
+        "go.gopath": "/go",
+        "go.toolsGopath": "/go",
+        "go.useLanguageServer": true,
+        "go.lintTool": "golangci-lint",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    },
+    "mcp": {
+      "servers": {
+        "mcp-docker": {
+          "command": "docker",
+          "args": [
+            "mcp",
+            "run",
+            "gateway",
+            "--profile",
+            "go-dev"
+          ]
+        }
+      }
+    }
+  }
+}

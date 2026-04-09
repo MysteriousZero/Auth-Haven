@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package auth;
+option go_package = "auth-haven/pkg/proto";
+
+service SessionService {
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+  rpc RevokeAllSessions(RevokeAllSessionsRequest) returns (RevokeAllSessionsResponse);
+}
+
+message ListSessionsRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListSessionsResponse {
+  repeated Session sessions = 1;
+  int32 total = 2;
+}
+
+message Session {
+  string session_id = 1;
+  string user_id = 2;
+  string device_name = 3;
+  string ip_address = 4;
+  string user_agent = 5;
+  string last_seen_at = 6;
+  string created_at = 7;
+}
+
+message RevokeSessionRequest {
+  string session_id = 1;
+}
+
+message RevokeSessionResponse {
+  bool success = 1;
+}
+
+message RevokeAllSessionsRequest {
+  string user_id = 1;
+}
+
+message RevokeAllSessionsResponse {
+  bool success = 1;
+  int32 revoked_count = 2;
+}

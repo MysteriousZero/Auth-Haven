@@ -1,0 +1,28 @@
+# Version Control
+.git
+.gitignore
+
+# Go Specific
+vendor/
+pkg/mod/
+pkg/sumdb/
+bin/
+*.test
+*.out
+*.prof
+
+# DevContainer & Tooling
+# .devcontainer/
+.vscode/
+.idea/
+.env
+*.log
+
+# Docker/Compose (Prevent self-reference issues)
+# Dockerfile*
+docker-compose*
+compose.y*ml
+
+# System Junk
+**/.DS_Store
+**/Thumbs.db
