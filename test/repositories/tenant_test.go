@@ -84,8 +84,11 @@ func TestTenantRepository_GetTenantByDomain(t *testing.T) {
 			t.Errorf("Expected tenant ID %s, got %s", tenantID, foundTenant.TenantID)
 		}
 
-		if foundTenant.Domain != tenant.Domain {
-			t.Errorf("Expected domain %v, got %v", tenant.Domain, foundTenant.Domain)
+		if foundTenant.Domain == nil || tenant.Domain == nil || *foundTenant.Domain != *tenant.Domain {
+			var expected, got string
+			if tenant.Domain != nil { expected = *tenant.Domain }
+			if foundTenant.Domain != nil { got = *foundTenant.Domain }
+			t.Errorf("Expected domain %v, got %v", expected, got)
 		}
 	})
 }

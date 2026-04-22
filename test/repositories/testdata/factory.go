@@ -13,15 +13,16 @@ func CreateTestTenant(tenantType models.TenantType) *models.Tenant {
 	now := time.Now().UTC()
 	tenantID := uuid.New().String()
 
-	domain := ""
+	var domainPtr *string
 	if tenantType == models.TenantTypeOrganization {
-		domain = "test-" + tenantID[:8] + ".example.com"
+		domain := "test-" + tenantID[:8] + ".example.com"
+		domainPtr = &domain
 	}
 
 	return &models.Tenant{
 		TenantID:  tenantID,
 		Name:      "Test Organization",
-		Domain:    &domain,
+		Domain:    domainPtr,
 		Status:    models.TenantStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -108,8 +109,7 @@ func CreateTestSessions(count int, userID string) []*models.Session {
 	for i := 0; i < count; i++ {
 		session := CreateTestSession(userID)
 		session.SessionID = uuid.New().String()
-		deviceID := "device-" + string(rune(i+1))
-		session.DeviceID = &deviceID
+		session.DeviceID = nil
 		session.ExpiresAt = time.Now().UTC().Add(time.Duration(i+1) * time.Hour)
 		sessions[i] = session
 	}
@@ -120,12 +120,12 @@ func CreateTestSessions(count int, userID string) []*models.Session {
 // CreateTestRole creates a test role
 func CreateTestRole(tenantID string) *models.Role {
 	now := time.Now().UTC()
-	roleID := int64(time.Now().Unix() % 1000) // Deterministic role ID
+	roleID := int64(time.Now().UnixNano() % 1000000) // Deterministic role ID
 
 	return &models.Role{
 		RoleID:    roleID,
 		TenantID:  tenantID,
-		Name:      "Test Role",
+		Name:      "Test Role " + uuid.New().String()[:8],
 		CreatedAt: now,
 	}
 }

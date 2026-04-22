@@ -121,10 +121,10 @@ func TestAuthRepository_RevokeSession(t *testing.T) {
 			t.Fatalf("Failed to revoke session: %v", err)
 		}
 
-		// Verify session was revoked by trying to get it (should still exist but be revoked)
+		// Verify session was revoked by trying to get it (should be deleted)
 		_, err = repo.GetSessionByID(context.Background(), session.SessionID)
-		if err != nil {
-			t.Errorf("Expected session to still exist after revocation, but got error: %v", err)
+		if err == nil {
+			t.Error("Expected session to be deleted, but it was found")
 		}
 	})
 }
