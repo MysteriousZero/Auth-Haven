@@ -50,10 +50,10 @@ RUN curl -sSL https://github.com/bufbuild/buf/releases/download/v1.26.0/buf-Linu
 # -------------------------
 # 3. Create non-root user
 # -------------------------
-# Pin docker group to GID 999 so it matches the host docker socket GID.
-# If your host uses a different GID, change 999 to match: stat -c '%g' /var/run/docker.sock
+# Pin docker group to GID 0 so it matches the host docker socket GID.
+# If your host uses a different GID, change 0 to match: stat -c '%g' /var/run/docker.sock
 RUN useradd -ms /bin/bash devuser && \
-    groupadd -f -g 999 docker && \
+    groupadd -f -g 0 docker && \
     usermod -aG docker devuser && \
     mkdir -p /go/pkg /go/bin /workspace && \
     chown -R devuser:devuser /go /workspace

@@ -11,6 +11,7 @@ services:
 
     command: sleep infinity
     tty: true
+    privileged: true
 
     environment:
       - DEBIAN_FRONTEND=noninteractive
