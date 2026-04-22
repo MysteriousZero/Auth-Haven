@@ -30,7 +30,7 @@ func (r *userRepository) CreateUser(ctx context.Context, user *models.User) erro
 	user.CreatedAt = now
 	user.UpdatedAt = now
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		user.UserID,
 		user.TenantID,
 		user.RoleID,
@@ -61,7 +61,7 @@ func (r *userRepository) GetUserByID(ctx context.Context, userID string) (*model
 	`
 
 	var user models.User
-	err := r.db.QueryRowContext(ctx, query, userID).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, userID).Scan(
 		&user.UserID,
 		&user.TenantID,
 		&user.RoleID,
@@ -92,7 +92,7 @@ func (r *userRepository) GetUserByEmail(ctx context.Context, tenantID, email str
 	`
 
 	var user models.User
-	err := r.db.QueryRowContext(ctx, query, tenantID, email).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tenantID, email).Scan(
 		&user.UserID,
 		&user.TenantID,
 		&user.RoleID,
@@ -124,7 +124,7 @@ func (r *userRepository) ListUsers(ctx context.Context, tenantID string, limit, 
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, tenantID, limit, offset)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
@@ -163,7 +163,7 @@ func (r *userRepository) UpdateUser(ctx context.Context, user *models.User) erro
 
 	user.UpdatedAt = time.Now().UTC()
 
-	result, err := r.db.ExecContext(ctx, query,
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		user.UserID,
 		user.FullName,
 		user.Status,
@@ -195,7 +195,7 @@ func (r *userRepository) UpdateUserStatus(ctx context.Context, userID string, st
 
 	now := time.Now().UTC()
 
-	result, err := r.db.ExecContext(ctx, query, userID, status, now)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, userID, status, now)
 	if err != nil {
 		return fmt.Errorf("failed to update user status: %w", err)
 	}
@@ -221,7 +221,7 @@ func (r *userRepository) UpdateLastLogin(ctx context.Context, userID string) err
 
 	now := time.Now().UTC()
 
-	result, err := r.db.ExecContext(ctx, query, userID, now)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, userID, now)
 	if err != nil {
 		return fmt.Errorf("failed to update last login: %w", err)
 	}
@@ -247,7 +247,7 @@ func (r *userRepository) UpdatePasswordHash(ctx context.Context, userID, passwor
 
 	now := time.Now().UTC()
 
-	result, err := r.db.ExecContext(ctx, query, userID, passwordHash, now)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, userID, passwordHash, now)
 	if err != nil {
 		return fmt.Errorf("failed to update password hash: %w", err)
 	}
@@ -273,7 +273,7 @@ func (r *userRepository) CreatePasswordReset(ctx context.Context, reset *models.
 
 	now := time.Now().UTC()
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		reset.ResetID,
 		reset.UserID,
 		reset.TokenHash,
@@ -299,7 +299,7 @@ func (r *userRepository) GetPasswordResetByHash(ctx context.Context, tokenHash s
 	`
 
 	var reset models.PasswordReset
-	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tokenHash).Scan(
 		&reset.ResetID,
 		&reset.UserID,
 		&reset.TokenHash,
@@ -328,7 +328,7 @@ func (r *userRepository) UpdatePasswordResetStatus(ctx context.Context, resetID 
 
 	now := time.Now().UTC()
 
-	result, err := r.db.ExecContext(ctx, query, resetID, status, now)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, resetID, status, now)
 	if err != nil {
 		return fmt.Errorf("failed to update password reset status: %w", err)
 	}
@@ -355,7 +355,7 @@ func (r *userRepository) RevokeAllUserTokens(ctx context.Context, userID string)
 
 	now := time.Now().UTC()
 
-	_, err := r.db.ExecContext(ctx, query, userID, now)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, userID, now)
 	if err != nil {
 		return fmt.Errorf("failed to revoke user tokens: %w", err)
 	}
@@ -372,7 +372,7 @@ func (r *userRepository) UpdateUserRole(ctx context.Context, userID string, role
 
 	now := time.Now().UTC()
 
-	_, err := r.db.ExecContext(ctx, query, userID, roleID, now)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, userID, roleID, now)
 	if err != nil {
 		return fmt.Errorf("failed to update user role: %w", err)
 	}
@@ -386,7 +386,7 @@ func (r *userRepository) DeleteUser(ctx context.Context, userID string) error {
 		WHERE user_id = $1
 	`
 
-	_, err := r.db.ExecContext(ctx, query, userID)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}

@@ -27,7 +27,7 @@ func (r *authRepository) CreateSession(ctx context.Context, session *models.Sess
 
 	session.CreatedAt = time.Now().UTC()
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		session.SessionID,
 		session.UserID,
 		session.DeviceID,
@@ -52,7 +52,7 @@ func (r *authRepository) GetSessionByID(ctx context.Context, sessionID string) (
 	`
 
 	var session models.Session
-	err := r.db.QueryRowContext(ctx, query, sessionID).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, sessionID).Scan(
 		&session.SessionID,
 		&session.UserID,
 		&session.DeviceID,
@@ -80,7 +80,7 @@ func (r *authRepository) GetActiveSessions(ctx context.Context, userID string) (
 		ORDER BY created_at DESC
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active sessions: %w", err)
 	}
@@ -110,7 +110,7 @@ func (r *authRepository) GetActiveSessions(ctx context.Context, userID string) (
 func (r *authRepository) DeleteSession(ctx context.Context, sessionID string) error {
 	query := `DELETE FROM sessions WHERE session_id = $1`
 
-	result, err := r.db.ExecContext(ctx, query, sessionID)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to delete session: %w", err)
 	}
@@ -130,7 +130,7 @@ func (r *authRepository) DeleteSession(ctx context.Context, sessionID string) er
 func (r *authRepository) DeleteAllUserSessions(ctx context.Context, userID string) error {
 	query := `DELETE FROM sessions WHERE user_id = $1`
 
-	_, err := r.db.ExecContext(ctx, query, userID)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to delete all user sessions: %w", err)
 	}
@@ -147,7 +147,7 @@ func (r *authRepository) CreateRefreshToken(ctx context.Context, token *models.R
 
 	token.CreatedAt = time.Now().UTC()
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		token.TokenID,
 		token.UserID,
 		token.TokenHash,
@@ -173,7 +173,7 @@ func (r *authRepository) GetRefreshTokenByHash(ctx context.Context, tokenHash st
 	`
 
 	var token models.RefreshToken
-	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tokenHash).Scan(
 		&token.TokenID,
 		&token.UserID,
 		&token.TokenHash,
@@ -197,7 +197,7 @@ func (r *authRepository) GetRefreshTokenByHash(ctx context.Context, tokenHash st
 func (r *authRepository) RevokeRefreshToken(ctx context.Context, tokenID string) error {
 	query := `UPDATE refresh_tokens SET revoked = true WHERE token_id = $1`
 
-	result, err := r.db.ExecContext(ctx, query, tokenID)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, tokenID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke refresh token: %w", err)
 	}
@@ -217,7 +217,7 @@ func (r *authRepository) RevokeRefreshToken(ctx context.Context, tokenID string)
 func (r *authRepository) RevokeAllUserTokens(ctx context.Context, userID string) error {
 	query := `UPDATE refresh_tokens SET revoked = true WHERE user_id = $1 AND revoked = false`
 
-	_, err := r.db.ExecContext(ctx, query, userID)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, userID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke all user tokens: %w", err)
 	}
@@ -234,7 +234,7 @@ func (r *authRepository) ListSessions(ctx context.Context, userID string, limit,
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions: %w", err)
 	}
@@ -269,7 +269,7 @@ func (r *authRepository) ListSessionsByDevice(ctx context.Context, deviceID stri
 		ORDER BY created_at DESC
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, deviceID)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, deviceID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list sessions by device: %w", err)
 	}
@@ -299,7 +299,7 @@ func (r *authRepository) ListSessionsByDevice(ctx context.Context, deviceID stri
 func (r *authRepository) RevokeSession(ctx context.Context, sessionID string) error {
 	query := `DELETE FROM sessions WHERE session_id = $1`
 
-	_, err := r.db.ExecContext(ctx, query, sessionID)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, sessionID)
 	if err != nil {
 		return fmt.Errorf("failed to revoke session: %w", err)
 	}

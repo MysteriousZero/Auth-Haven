@@ -28,7 +28,7 @@ func (r *tenantRepository) GetTenantByID(ctx context.Context, tenantID string) (
 	`
 
 	var tenant models.Tenant
-	err := r.db.QueryRowContext(ctx, query, tenantID).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tenantID).Scan(
 		&tenant.TenantID,
 		&tenant.Name,
 		&tenant.Domain,
@@ -55,7 +55,7 @@ func (r *tenantRepository) GetTenantByDomain(ctx context.Context, domain string)
 	`
 
 	var tenant models.Tenant
-	err := r.db.QueryRowContext(ctx, query, domain).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, domain).Scan(
 		&tenant.TenantID,
 		&tenant.Name,
 		&tenant.Domain,
@@ -84,7 +84,7 @@ func (r *tenantRepository) CreateTenant(ctx context.Context, tenant *models.Tena
 	tenant.CreatedAt = now
 	tenant.UpdatedAt = now
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		tenant.TenantID,
 		tenant.Name,
 		tenant.Domain,
@@ -113,7 +113,7 @@ func (r *tenantRepository) UpdateTenant(ctx context.Context, tenant *models.Tena
 
 	tenant.UpdatedAt = time.Now().UTC()
 
-	result, err := r.db.ExecContext(ctx, query,
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		tenant.TenantID,
 		tenant.Name,
 		tenant.Domain,
@@ -146,7 +146,7 @@ func (r *tenantRepository) CreateInvitation(ctx context.Context, invitation *mod
 	now := time.Now().UTC()
 	invitation.CreatedAt = now
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		invitation.InvitationID,
 		invitation.TenantID,
 		invitation.RoleID,
@@ -172,7 +172,7 @@ func (r *tenantRepository) GetInvitationByHash(ctx context.Context, tokenHash st
 	`
 
 	var invitation models.Invitation
-	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tokenHash).Scan(
 		&invitation.InvitationID,
 		&invitation.TenantID,
 		&invitation.RoleID,
@@ -201,7 +201,7 @@ func (r *tenantRepository) GetInvitationByID(ctx context.Context, invitationID s
 	`
 
 	var invitation models.Invitation
-	err := r.db.QueryRowContext(ctx, query, invitationID).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, invitationID).Scan(
 		&invitation.InvitationID,
 		&invitation.TenantID,
 		&invitation.RoleID,
@@ -229,7 +229,7 @@ func (r *tenantRepository) UpdateInvitationStatus(ctx context.Context, invitatio
 		WHERE invitation_id = $1
 	`
 
-	result, err := r.db.ExecContext(ctx, query, invitationID, status)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, invitationID, status)
 	if err != nil {
 		return fmt.Errorf("failed to update invitation status: %w", err)
 	}
@@ -255,7 +255,7 @@ func (r *tenantRepository) ListInvitations(ctx context.Context, tenantID string,
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, tenantID, limit, offset)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list invitations: %w", err)
 	}

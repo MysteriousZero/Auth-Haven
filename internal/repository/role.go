@@ -20,18 +20,18 @@ func NewRoleRepository(db *sql.DB) interfaces.RoleRepository {
 
 func (r *roleRepository) CreateRole(ctx context.Context, role *models.Role) error {
 	query := `
-		INSERT INTO roles (role_id, tenant_id, name, created_at)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO roles (tenant_id, name, created_at)
+		VALUES ($1, $2, $3)
+		RETURNING role_id
 	`
 
 	role.CreatedAt = time.Now().UTC()
 
-	_, err := r.db.ExecContext(ctx, query,
-		role.RoleID,
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query,
 		role.TenantID,
 		role.Name,
 		role.CreatedAt,
-	)
+	).Scan(&role.RoleID)
 
 	if err != nil {
 		return fmt.Errorf("failed to create role: %w", err)
@@ -48,7 +48,7 @@ func (r *roleRepository) GetRoleByID(ctx context.Context, roleID int64) (*models
 	`
 
 	var role models.Role
-	err := r.db.QueryRowContext(ctx, query, roleID).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, roleID).Scan(
 		&role.RoleID,
 		&role.TenantID,
 		&role.Name,
@@ -74,7 +74,7 @@ func (r *roleRepository) ListRoles(ctx context.Context, tenantID string, limit, 
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, tenantID, limit, offset)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, tenantID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list roles: %w", err)
 	}
@@ -105,7 +105,7 @@ func (r *roleRepository) UpdateRole(ctx context.Context, role *models.Role) erro
 		WHERE role_id = $1
 	`
 
-	result, err := r.db.ExecContext(ctx, query, role.RoleID, role.Name)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, role.RoleID, role.Name)
 	if err != nil {
 		return fmt.Errorf("failed to update role: %w", err)
 	}
@@ -126,7 +126,7 @@ func (r *roleRepository) DeleteRole(ctx context.Context, roleID int64) error {
 	// First check if role is in use
 	checkQuery := `SELECT COUNT(*) FROM users WHERE role_id = $1`
 	var count int
-	err := r.db.QueryRowContext(ctx, checkQuery, roleID).Scan(&count)
+	err := getDB(ctx, r.db).QueryRowContext(ctx, checkQuery, roleID).Scan(&count)
 	if err != nil {
 		return fmt.Errorf("failed to check role usage: %w", err)
 	}
@@ -137,7 +137,7 @@ func (r *roleRepository) DeleteRole(ctx context.Context, roleID int64) error {
 
 	// Delete role permissions first
 	deletePermsQuery := `DELETE FROM role_permissions WHERE role_id = $1`
-	_, err = r.db.ExecContext(ctx, deletePermsQuery, roleID)
+	_, err = getDB(ctx, r.db).ExecContext(ctx, deletePermsQuery, roleID)
 	if err != nil {
 		return fmt.Errorf("failed to delete role permissions: %w", err)
 	}
@@ -145,7 +145,7 @@ func (r *roleRepository) DeleteRole(ctx context.Context, roleID int64) error {
 	// Delete role
 	query := `DELETE FROM roles WHERE role_id = $1`
 
-	result, err := r.db.ExecContext(ctx, query, roleID)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, roleID)
 	if err != nil {
 		return fmt.Errorf("failed to delete role: %w", err)
 	}
@@ -169,7 +169,7 @@ func (r *roleRepository) CreateRolePermission(ctx context.Context, roleID int64,
 		ON CONFLICT DO NOTHING
 	`
 
-	_, err := r.db.ExecContext(ctx, query, roleID, permissionKey)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, roleID, permissionKey)
 	if err != nil {
 		return fmt.Errorf("failed to create role permission: %w", err)
 	}
@@ -180,7 +180,7 @@ func (r *roleRepository) CreateRolePermission(ctx context.Context, roleID int64,
 func (r *roleRepository) DeleteRolePermissions(ctx context.Context, roleID int64) error {
 	query := `DELETE FROM role_permissions WHERE role_id = $1`
 
-	_, err := r.db.ExecContext(ctx, query, roleID)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, roleID)
 	if err != nil {
 		return fmt.Errorf("failed to delete role permissions: %w", err)
 	}
@@ -196,7 +196,7 @@ func (r *roleRepository) GetRolePermissions(ctx context.Context, roleID int64) (
 		ORDER BY permission_key
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, roleID)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, roleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role permissions: %w", err)
 	}
@@ -227,7 +227,7 @@ func (r *roleRepository) GetRoleByName(ctx context.Context, tenantID, name strin
 	`
 
 	var role models.Role
-	err := r.db.QueryRowContext(ctx, query, tenantID, name).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tenantID, name).Scan(
 		&role.RoleID,
 		&role.TenantID,
 		&role.Name,
@@ -251,7 +251,7 @@ func (r *roleRepository) AddRolePermission(ctx context.Context, roleID int64, pe
 		ON CONFLICT (role_id, permission_key) DO NOTHING
 	`
 
-	_, err := r.db.ExecContext(ctx, query, roleID, permissionKey)
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query, roleID, permissionKey)
 	if err != nil {
 		return fmt.Errorf("failed to add role permission: %w", err)
 	}
@@ -280,7 +280,7 @@ func (r *deviceRepository) CreateDevice(ctx context.Context, device *models.Devi
 	device.CreatedAt = now
 	device.LastSeenAt = now
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		device.DeviceID,
 		device.UserID,
 		device.DeviceName,
@@ -303,7 +303,7 @@ func (r *deviceRepository) GetDeviceByID(ctx context.Context, deviceID string) (
 	`
 
 	var device models.Device
-	err := r.db.QueryRowContext(ctx, query, deviceID).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, deviceID).Scan(
 		&device.DeviceID,
 		&device.UserID,
 		&device.DeviceName,
@@ -330,7 +330,7 @@ func (r *deviceRepository) ListDevices(ctx context.Context, userID string, limit
 		LIMIT $2 OFFSET $3
 	`
 
-	rows, err := r.db.QueryContext(ctx, query, userID, limit, offset)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list devices: %w", err)
 	}
@@ -364,7 +364,7 @@ func (r *deviceRepository) UpdateDevice(ctx context.Context, device *models.Devi
 
 	device.LastSeenAt = time.Now().UTC()
 
-	result, err := r.db.ExecContext(ctx, query,
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		device.DeviceID,
 		device.DeviceName,
 		device.LastSeenAt,
@@ -388,7 +388,7 @@ func (r *deviceRepository) UpdateDevice(ctx context.Context, device *models.Devi
 func (r *deviceRepository) DeleteDevice(ctx context.Context, deviceID string) error {
 	query := `DELETE FROM devices WHERE device_id = $1`
 
-	result, err := r.db.ExecContext(ctx, query, deviceID)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, deviceID)
 	if err != nil {
 		return fmt.Errorf("failed to delete device: %w", err)
 	}
@@ -408,7 +408,7 @@ func (r *deviceRepository) DeleteDevice(ctx context.Context, deviceID string) er
 func (r *deviceRepository) UpdateDeviceLastSeen(ctx context.Context, deviceID string) error {
 	query := `UPDATE devices SET last_seen_at = NOW() WHERE device_id = $1`
 
-	result, err := r.db.ExecContext(ctx, query, deviceID)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, deviceID)
 	if err != nil {
 		return fmt.Errorf("failed to update device last seen: %w", err)
 	}

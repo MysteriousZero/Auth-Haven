@@ -26,7 +26,7 @@ func (r *mfaMethodRepository) CreateMFAMethod(ctx context.Context, method *model
 	
 	method.CreatedAt = time.Now().UTC()
 	
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		method.MFAID,
 		method.UserID,
 		method.Type,
@@ -51,7 +51,7 @@ func (r *mfaMethodRepository) ListMFAMethods(ctx context.Context, userID string)
 		ORDER BY created_at DESC
 	`
 	
-	rows, err := r.db.QueryContext(ctx, query, userID)
+	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list MFA methods: %w", err)
 	}
@@ -81,7 +81,7 @@ func (r *mfaMethodRepository) ListMFAMethods(ctx context.Context, userID string)
 func (r *mfaMethodRepository) UpdateMFAMethod(ctx context.Context, mfaID string, enabled bool) error {
 	query := `UPDATE user_mfa_methods SET enabled = $2 WHERE mfa_id = $1`
 	
-	result, err := r.db.ExecContext(ctx, query, mfaID, enabled)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, mfaID, enabled)
 	if err != nil {
 		return fmt.Errorf("failed to update MFA method: %w", err)
 	}
@@ -101,7 +101,7 @@ func (r *mfaMethodRepository) UpdateMFAMethod(ctx context.Context, mfaID string,
 func (r *mfaMethodRepository) DeleteMFAMethod(ctx context.Context, mfaID string) error {
 	query := `DELETE FROM user_mfa_methods WHERE mfa_id = $1`
 
-	result, err := r.db.ExecContext(ctx, query, mfaID)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, mfaID)
 	if err != nil {
 		return fmt.Errorf("failed to delete MFA method: %w", err)
 	}
@@ -134,7 +134,7 @@ func (r *passwordResetRepository) CreatePasswordReset(ctx context.Context, reset
 	
 	reset.CreatedAt = time.Now().UTC()
 	
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		reset.ResetID,
 		reset.UserID,
 		reset.TokenHash,
@@ -158,7 +158,7 @@ func (r *passwordResetRepository) GetPasswordResetByHash(ctx context.Context, to
 	`
 	
 	var reset models.PasswordReset
-	err := r.db.QueryRowContext(ctx, query, tokenHash).Scan(
+	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tokenHash).Scan(
 		&reset.ResetID,
 		&reset.UserID,
 		&reset.TokenHash,
@@ -180,7 +180,7 @@ func (r *passwordResetRepository) GetPasswordResetByHash(ctx context.Context, to
 func (r *passwordResetRepository) UpdatePasswordResetStatus(ctx context.Context, resetID string, status models.PasswordResetStatus) error {
 	query := `UPDATE password_resets SET status = $2 WHERE reset_id = $1`
 	
-	result, err := r.db.ExecContext(ctx, query, resetID, status)
+	result, err := getDB(ctx, r.db).ExecContext(ctx, query, resetID, status)
 	if err != nil {
 		return fmt.Errorf("failed to update password reset status: %w", err)
 	}
@@ -219,7 +219,7 @@ func (r *auditRepository) CreateAuditLog(ctx context.Context, log *models.AuditL
 		metadata = log.Metadata
 	}
 	
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		log.LogID,
 		log.UserID,
 		log.TenantID,
@@ -251,7 +251,7 @@ func (r *auditRepository) ListTenantLogs(ctx context.Context, tenantID string, c
 			ORDER BY created_at DESC
 			LIMIT $2
 		`
-		rows, err = r.db.QueryContext(ctx, query, tenantID, limit)
+		rows, err = getDB(ctx, r.db).QueryContext(ctx, query, tenantID, limit)
 	} else {
 		query = `
 			SELECT log_id, user_id, tenant_id, action, target_id, metadata, ip_address, user_agent, trace_id, created_at
@@ -260,7 +260,7 @@ func (r *auditRepository) ListTenantLogs(ctx context.Context, tenantID string, c
 			ORDER BY created_at DESC
 			LIMIT $3
 		`
-		rows, err = r.db.QueryContext(ctx, query, tenantID, cursor, limit)
+		rows, err = getDB(ctx, r.db).QueryContext(ctx, query, tenantID, cursor, limit)
 	}
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to list tenant logs: %w", err)
@@ -312,7 +312,7 @@ func (r *auditRepository) ListUserLogs(ctx context.Context, userID string, curso
 			ORDER BY created_at DESC
 			LIMIT $2
 		`
-		rows, err = r.db.QueryContext(ctx, query, userID, limit)
+		rows, err = getDB(ctx, r.db).QueryContext(ctx, query, userID, limit)
 	} else {
 		query = `
 			SELECT log_id, user_id, tenant_id, action, target_id, metadata, ip_address, user_agent, trace_id, created_at
@@ -321,7 +321,7 @@ func (r *auditRepository) ListUserLogs(ctx context.Context, userID string, curso
 			ORDER BY created_at DESC
 			LIMIT $3
 		`
-		rows, err = r.db.QueryContext(ctx, query, userID, cursor, limit)
+		rows, err = getDB(ctx, r.db).QueryContext(ctx, query, userID, cursor, limit)
 	}
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to list user logs: %w", err)

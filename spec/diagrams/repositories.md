@@ -6,6 +6,17 @@ No business logic lives here — only data access.
 
 ---
 
+## Transaction Management
+
+To support multi-repository transactions (e.g., creating a user and a role simultaneously), the `TransactionManager` interface is used. 
+
+Transactions are managed implicitly via context propagation. You do not need to pass `sql.Tx` explicitly into repository methods.
+1. The service layer calls `txManager.WithTransaction(ctx, func(txCtx context.Context) error { ... })`.
+2. Inside the callback, `txCtx` contains the active transaction.
+3. Repositories extract the transaction from `txCtx` using an internal `getDB(ctx, r.db)` helper. If a transaction exists in the context, queries join it. Otherwise, they execute individually on the default connection pool.
+
+---
+
 ## 1. Tenant Repository
 
 Manages tenant-scoped resources: tenants, roles, role permissions, and invitations.
