@@ -22,7 +22,9 @@ Known gaps—including permissive CORS, incomplete gRPC validation, ephemeral si
 - MFA challenge tokens are short-lived and signed rather than stored as server-side challenge state.
 - Protected HTTP requests send `Authorization: Bearer <token>`; logout also sends `X-Session-ID`.
 - Missing, malformed, expired, revoked, or replayed credentials must fail closed.
-- Production instances must share a stable signing key. The generated-on-startup fallback is development-only.
+- Production instances fail startup without a stable signing key. All replicas share the active key and identify it with a JWT `kid` header.
+- Verification keys may overlap during planned rotation; removing a key ID immediately invalidates JWTs signed by it. See the [configuration guide](configuration.md#signing-key-rotation).
+- Access, refresh, temporary-token, and session lifetimes come from validated configuration. JWT validation permits only the configured clock-skew window.
 
 ## Authorization and tenant isolation
 

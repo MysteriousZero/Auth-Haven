@@ -1,17 +1,21 @@
 package config
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Config struct {
-	Database DatabaseConfig
-	Server   ServerConfig
-	Auth     AuthConfig
-	Security SecurityConfig
-	Redis    RedisConfig
+	Environment string
+	Database    DatabaseConfig
+	Server      ServerConfig
+	Auth        AuthConfig
+	Security    SecurityConfig
+	Redis       RedisConfig
 }
 
 type DatabaseConfig struct {
@@ -33,11 +37,14 @@ type ServerConfig struct {
 }
 
 type AuthConfig struct {
-	JWTPrivateKey   string
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
-	TempTokenTTL    time.Duration
-	SessionTTL      time.Duration
+	JWTKeyID            string
+	JWTPrivateKey       string
+	JWTVerificationKeys map[string]string
+	AccessTokenTTL      time.Duration
+	RefreshTokenTTL     time.Duration
+	TempTokenTTL        time.Duration
+	SessionTTL          time.Duration
+	TokenClockSkew      time.Duration
 }
 
 type SecurityConfig struct {
@@ -59,7 +66,27 @@ type RedisConfig struct {
 }
 
 func Load() (*Config, error) {
+	auth, err := loadAuthConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	environment := strings.ToLower(getEnv("APP_ENV", "development"))
+	switch environment {
+	case "development", "test":
+	case "production":
+		if auth.JWTPrivateKey == "" {
+			return nil, fmt.Errorf("JWT_PRIVATE_KEY is required when APP_ENV=production")
+		}
+		if _, explicitlySet := os.LookupEnv("JWT_KEY_ID"); !explicitlySet || strings.TrimSpace(auth.JWTKeyID) == "" {
+			return nil, fmt.Errorf("JWT_KEY_ID is required when APP_ENV=production")
+		}
+	default:
+		return nil, fmt.Errorf("APP_ENV must be development, test, or production")
+	}
+
 	return &Config{
+		Environment: environment,
 		Database: DatabaseConfig{
 			Host:            getEnv("DB_HOST", "localhost"),
 			Port:            getEnvAsInt("DB_PORT", 5432),
@@ -76,13 +103,7 @@ func Load() (*Config, error) {
 			GRPCPort: getEnv("GRPC_PORT", ":50051"),
 			Host:     getEnv("SERVER_HOST", "0.0.0.0"),
 		},
-		Auth: AuthConfig{
-			JWTPrivateKey:   getEnv("JWT_PRIVATE_KEY", ""), // Empty will generate a key (not for production)
-			AccessTokenTTL:  getEnvAsDuration("ACCESS_TOKEN_TTL", 15*time.Minute),
-			RefreshTokenTTL: getEnvAsDuration("REFRESH_TOKEN_TTL", 7*24*time.Hour),
-			TempTokenTTL:    getEnvAsDuration("TEMP_TOKEN_TTL", 10*time.Minute),
-			SessionTTL:      getEnvAsDuration("SESSION_TTL", 24*time.Hour),
-		},
+		Auth: auth,
 		Security: SecurityConfig{
 			PasswordMinLength:      getEnvAsInt("PASSWORD_MIN_LENGTH", 12),
 			PasswordRequireUpper:   getEnvAsBool("PASSWORD_REQUIRE_UPPER", true),
@@ -100,6 +121,81 @@ func Load() (*Config, error) {
 			DB:       getEnvAsInt("REDIS_DB", 0),
 		},
 	}, nil
+}
+
+func loadAuthConfig() (AuthConfig, error) {
+	accessTTL, err := getRequiredPositiveDuration("ACCESS_TOKEN_TTL", 15*time.Minute)
+	if err != nil {
+		return AuthConfig{}, err
+	}
+	refreshTTL, err := getRequiredPositiveDuration("REFRESH_TOKEN_TTL", 7*24*time.Hour)
+	if err != nil {
+		return AuthConfig{}, err
+	}
+	tempTTL, err := getRequiredPositiveDuration("TEMP_TOKEN_TTL", 10*time.Minute)
+	if err != nil {
+		return AuthConfig{}, err
+	}
+	sessionTTL, err := getRequiredPositiveDuration("SESSION_TTL", 24*time.Hour)
+	if err != nil {
+		return AuthConfig{}, err
+	}
+	clockSkew, err := getNonNegativeDuration("TOKEN_CLOCK_SKEW", 30*time.Second)
+	if err != nil {
+		return AuthConfig{}, err
+	}
+
+	verificationKeys := make(map[string]string)
+	if raw := getEnv("JWT_VERIFICATION_KEYS", ""); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &verificationKeys); err != nil {
+			return AuthConfig{}, fmt.Errorf("JWT_VERIFICATION_KEYS must be a JSON object of key IDs to base64 public keys: %w", err)
+		}
+	}
+
+	return AuthConfig{
+		JWTKeyID:            getEnv("JWT_KEY_ID", "development"),
+		JWTPrivateKey:       getEnv("JWT_PRIVATE_KEY", ""),
+		JWTVerificationKeys: verificationKeys,
+		AccessTokenTTL:      accessTTL,
+		RefreshTokenTTL:     refreshTTL,
+		TempTokenTTL:        tempTTL,
+		SessionTTL:          sessionTTL,
+		TokenClockSkew:      clockSkew,
+	}, nil
+}
+
+func getRequiredPositiveDuration(key string, fallback time.Duration) (time.Duration, error) {
+	duration, err := getValidatedDuration(key, fallback)
+	if err != nil {
+		return 0, err
+	}
+	if duration <= 0 {
+		return 0, fmt.Errorf("%s must be greater than zero", key)
+	}
+	return duration, nil
+}
+
+func getNonNegativeDuration(key string, fallback time.Duration) (time.Duration, error) {
+	duration, err := getValidatedDuration(key, fallback)
+	if err != nil {
+		return 0, err
+	}
+	if duration < 0 {
+		return 0, fmt.Errorf("%s must not be negative", key)
+	}
+	return duration, nil
+}
+
+func getValidatedDuration(key string, fallback time.Duration) (time.Duration, error) {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback, nil
+	}
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %w", key, err)
+	}
+	return duration, nil
 }
 
 func getEnv(key, fallback string) string {

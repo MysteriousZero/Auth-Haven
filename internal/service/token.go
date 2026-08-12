@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -16,39 +17,94 @@ import (
 )
 
 type tokenService struct {
-	privateKey ed25519.PrivateKey
-	publicKey  ed25519.PublicKey
+	keyProvider SigningKeyProvider
+	accessTTL   time.Duration
+	tempTTL     time.Duration
+	clockSkew   time.Duration
+	now         func() time.Time
 }
 
-func NewTokenService(privateKeyHex string) interfaces.TokenService {
-	// For now, generate a new key pair if none provided
-	// In production, this should be loaded from environment or secure storage
+// SigningKeyProvider is the secret-manager/KMS boundary used by token signing.
+// Providers return an active private key for signing and public keys retained
+// during a rotation overlap window for verification.
+type SigningKeyProvider interface {
+	ActiveKeyID() string
+	SignJWT(token *jwt.Token) (string, error)
+	VerificationKey(keyID string) (ed25519.PublicKey, error)
+}
+
+type staticSigningKeyProvider struct {
+	activeKeyID string
+	privateKey  ed25519.PrivateKey
+	publicKeys  map[string]ed25519.PublicKey
+}
+
+// NewStaticSigningKeyProvider builds the environment-backed provider. An empty
+// private key is allowed only for local development and produces an ephemeral key.
+func NewStaticSigningKeyProvider(activeKeyID, privateKeyBase64 string, verificationKeys map[string]string) (SigningKeyProvider, error) {
+	if strings.TrimSpace(activeKeyID) == "" {
+		return nil, fmt.Errorf("signing key ID must not be empty")
+	}
+
 	var privateKey ed25519.PrivateKey
-
-	if privateKeyHex == "" {
-		_, privateKey, _ = ed25519.GenerateKey(rand.Reader)
-	} else {
-		// Parse hex private key
-		privateKeyBytes, err := base64.StdEncoding.DecodeString(privateKeyHex)
+	if privateKeyBase64 == "" {
+		_, generated, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to decode private key: %v", err))
+			return nil, fmt.Errorf("generate development signing key: %w", err)
 		}
-		if len(privateKeyBytes) != ed25519.PrivateKeySize {
-			panic("Invalid private key size")
+		privateKey = generated
+	} else {
+		decoded, err := base64.StdEncoding.DecodeString(privateKeyBase64)
+		if err != nil {
+			return nil, fmt.Errorf("decode signing private key: %w", err)
 		}
-		privateKey = ed25519.PrivateKey(privateKeyBytes)
+		if len(decoded) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf("signing private key must be %d bytes", ed25519.PrivateKeySize)
+		}
+		privateKey = ed25519.PrivateKey(decoded)
 	}
 
-	publicKey := privateKey.Public().(ed25519.PublicKey)
-
-	return &tokenService{
-		privateKey: privateKey,
-		publicKey:  publicKey,
+	publicKeys := make(map[string]ed25519.PublicKey, len(verificationKeys)+1)
+	for keyID, encoded := range verificationKeys {
+		if keyID == "" {
+			return nil, fmt.Errorf("verification key ID must not be empty")
+		}
+		decoded, err := base64.StdEncoding.DecodeString(encoded)
+		if err != nil {
+			return nil, fmt.Errorf("decode verification key %q: %w", keyID, err)
+		}
+		if len(decoded) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf("verification key %q must be %d bytes", keyID, ed25519.PublicKeySize)
+		}
+		publicKeys[keyID] = ed25519.PublicKey(decoded)
 	}
+	publicKeys[activeKeyID] = privateKey.Public().(ed25519.PublicKey)
+
+	return &staticSigningKeyProvider{activeKeyID: activeKeyID, privateKey: privateKey, publicKeys: publicKeys}, nil
+}
+
+func (p *staticSigningKeyProvider) ActiveKeyID() string {
+	return p.activeKeyID
+}
+
+func (p *staticSigningKeyProvider) SignJWT(token *jwt.Token) (string, error) {
+	return token.SignedString(p.privateKey)
+}
+
+func (p *staticSigningKeyProvider) VerificationKey(keyID string) (ed25519.PublicKey, error) {
+	key, ok := p.publicKeys[keyID]
+	if !ok {
+		return nil, fmt.Errorf("unknown signing key ID")
+	}
+	return key, nil
+}
+
+func NewTokenService(provider SigningKeyProvider, accessTTL, tempTTL, clockSkew time.Duration) interfaces.TokenService {
+	return &tokenService{keyProvider: provider, accessTTL: accessTTL, tempTTL: tempTTL, clockSkew: clockSkew, now: time.Now}
 }
 
 func (s *tokenService) GenerateTokenPair(userID, tenantID string, roleID *int64) (*models.TokenPair, error) {
-	now := time.Now().UTC()
+	now := s.now().UTC()
 
 	// Get tenant type (would need to fetch from DB, for now assume 1)
 	tenantType := int16(1)
@@ -61,12 +117,13 @@ func (s *tokenService) GenerateTokenPair(userID, tenantID string, roleID *int64)
 		"role_id":     roleID,
 		"email":       "", // Would need to fetch from user
 		"iat":         now.Unix(),
-		"exp":         now.Add(15 * time.Minute).Unix(), // 15 minutes
+		"exp":         now.Add(s.accessTTL).Unix(),
 		"iss":         "auth-haven",
 		"aud":         "auth-haven-client",
 	})
 
-	accessTokenString, err := accessToken.SignedString(s.privateKey)
+	accessToken.Header["kid"] = s.keyProvider.ActiveKeyID()
+	accessTokenString, err := s.keyProvider.SignJWT(accessToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign access token: %w", err)
 	}
@@ -84,27 +141,25 @@ func (s *tokenService) GenerateTokenPair(userID, tenantID string, roleID *int64)
 }
 
 func (s *tokenService) GenerateTempToken(userID string) (string, error) {
+	now := s.now().UTC()
 	// Create a temporary token for MFA verification
 	token := jwt.NewWithClaims(jwt.SigningMethodEdDSA, jwt.MapClaims{
 		"sub":  userID,
-		"iat":  time.Now().UTC().Unix(),
-		"exp":  time.Now().UTC().Add(10 * time.Minute).Unix(), // 10 minutes
+		"iat":  now.Unix(),
+		"exp":  now.Add(s.tempTTL).Unix(),
 		"iss":  "auth-haven",
 		"aud":  "auth-haven-mfa",
 		"type": "temp",
 	})
 
-	return token.SignedString(s.privateKey)
+	token.Header["kid"] = s.keyProvider.ActiveKeyID()
+	return s.keyProvider.SignJWT(token)
 }
 
 func (s *tokenService) ValidateTempToken(tempToken string) (string, error) {
-	parsedToken, err := jwt.Parse(tempToken, func(token *jwt.Token) (interface{}, error) {
-		// Verify signing method
-		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return s.publicKey, nil
-	})
+	parsedToken, err := jwt.Parse(tempToken, s.verificationKey,
+		jwt.WithLeeway(s.clockSkew), jwt.WithTimeFunc(s.now), jwt.WithAudience("auth-haven-mfa"),
+		jwt.WithIssuer("auth-haven"), jwt.WithExpirationRequired())
 
 	if err != nil {
 		return "", fmt.Errorf("invalid temp token")
@@ -122,13 +177,6 @@ func (s *tokenService) ValidateTempToken(tempToken string) (string, error) {
 	// Check if it's a temp token
 	if tokenType, ok := claims["type"].(string); !ok || tokenType != "temp" {
 		return "", fmt.Errorf("not a temp token")
-	}
-
-	// Check expiration
-	if exp, ok := claims["exp"].(float64); ok {
-		if time.Now().Unix() > int64(exp) {
-			return "", fmt.Errorf("temp token expired")
-		}
 	}
 
 	userID, ok := claims["sub"].(string)
@@ -225,13 +273,9 @@ func (h *hasher) HashToken(token string) string {
 
 func (s *tokenService) ValidateAccessToken(ctx context.Context, token string) (*models.Claims, error) {
 	// Parse JWT token
-	parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		// Verify signing method
-		if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return s.publicKey, nil
-	})
+	parsedToken, err := jwt.Parse(token, s.verificationKey,
+		jwt.WithLeeway(s.clockSkew), jwt.WithTimeFunc(s.now), jwt.WithAudience("auth-haven-client"),
+		jwt.WithIssuer("auth-haven"), jwt.WithExpirationRequired())
 
 	if err != nil {
 		return nil, fmt.Errorf("invalid token: %w", err)
@@ -245,13 +289,6 @@ func (s *tokenService) ValidateAccessToken(ctx context.Context, token string) (*
 	claims, ok := parsedToken.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")
-	}
-
-	// Check expiration
-	if exp, ok := claims["exp"].(float64); ok {
-		if time.Now().Unix() > int64(exp) {
-			return nil, fmt.Errorf("token expired")
-		}
 	}
 
 	// Build claims object
@@ -275,3 +312,13 @@ func (s *tokenService) ValidateAccessToken(ctx context.Context, token string) (*
 	return userClaims, nil
 }
 
+func (s *tokenService) verificationKey(token *jwt.Token) (interface{}, error) {
+	if _, ok := token.Method.(*jwt.SigningMethodEd25519); !ok {
+		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+	}
+	keyID, ok := token.Header["kid"].(string)
+	if !ok || keyID == "" {
+		return nil, fmt.Errorf("missing signing key ID")
+	}
+	return s.keyProvider.VerificationKey(keyID)
+}
