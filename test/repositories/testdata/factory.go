@@ -23,6 +23,7 @@ func CreateTestTenant(tenantType models.TenantType) *models.Tenant {
 		TenantID:  tenantID,
 		Name:      "Test Organization",
 		Domain:    domainPtr,
+		Type:      tenantType,
 		Status:    models.TenantStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,

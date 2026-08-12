@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -36,7 +34,7 @@ func SetupTestSuite(t *testing.T) *TestSuite {
 	DropAllTables(t, pc.DB)
 
 	// Run database migrations
-	RunMigrations(t, pc.DB)
+	container.RunMigrations(t, pc.Database, pc.DB)
 
 	// Generate a test tenant ID
 	tenantID := uuid.New().String()
@@ -98,14 +96,15 @@ func CreateTestTenant(t *testing.T, db *sql.DB, tenantType int16) string {
 	tenant := testdata.CreateTestTenant(tenantTypeModel)
 
 	query := `
-		INSERT INTO tenants (tenant_id, name, domain, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO tenants (tenant_id, name, domain, type, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := db.ExecContext(ctx, query,
 		tenant.TenantID,
 		tenant.Name,
 		tenant.Domain,
+		tenant.Type,
 		tenant.Status,
 		tenant.CreatedAt,
 		tenant.UpdatedAt,
@@ -358,78 +357,6 @@ func RunWithUser(t *testing.T, testFunc func(*sql.DB, string, string)) {
 
 	// Run the test
 	testFunc(suite.DB, tenantID, userID)
-}
-
-// RunMigrations executes all SQL migration files
-func RunMigrations(t *testing.T, db *sql.DB) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Get the project root directory
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Failed to get working directory: %v", err)
-	}
-
-	// Navigate to migrations directory
-	migrationsDir := filepath.Join(wd, "..", "..", "migrations")
-
-	// Read all migration files
-	migrationFiles, err := filepath.Glob(filepath.Join(migrationsDir, "*.up.sql"))
-	if err != nil {
-		t.Fatalf("Failed to find migration files: %v", err)
-	}
-
-	if len(migrationFiles) == 0 {
-		t.Fatalf("No migration files found in %s", migrationsDir)
-	}
-
-	// Execute each migration file
-	for _, file := range migrationFiles {
-		content, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatalf("Failed to read migration file %s: %v", file, err)
-		}
-
-		// Execute the migration with error handling for already existing relations
-		_, err = db.ExecContext(ctx, string(content))
-		if err != nil {
-			// Check if it's a "already exists" error, which is acceptable in tests
-			if isAlreadyExistsError(err) {
-				t.Logf("Migration %s: relations already exist, skipping", filepath.Base(file))
-				continue
-			}
-			t.Fatalf("Failed to execute migration %s: %v", filepath.Base(file), err)
-		}
-
-		t.Logf("Successfully executed migration: %s", filepath.Base(file))
-	}
-}
-
-// isAlreadyExistsError checks if the error is about already existing relations
-func isAlreadyExistsError(err error) bool {
-	errStr := err.Error()
-	return contains(errStr, "already exists") ||
-		contains(errStr, "duplicate key") ||
-		contains(errStr, "relation") && contains(errStr, "already exists") ||
-		contains(errStr, "syntax error") // Handle syntax errors in migrations gracefully for now
-}
-
-// contains checks if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr ||
-		(len(s) > len(substr) && (s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-			findSubstring(s, substr))))
-}
-
-// findSubstring is a simple substring finder
-func findSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // DropAllTables drops all tables in the database for a clean slate

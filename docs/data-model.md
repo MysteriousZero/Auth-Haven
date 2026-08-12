@@ -1,6 +1,6 @@
 # Data model
 
-PostgreSQL is the system of record. The authoritative schema for a deployed database is the ordered migration history applied to that database; Go models and repository queries must remain compatible with it.
+PostgreSQL is the system of record. [`000001_init_schema.up.sql`](../migrations/000001_init_schema.up.sql) is the authoritative baseline. All later changes are forward-only, numerically ordered migrations.
 
 ## Relationships
 
@@ -53,14 +53,11 @@ The Go constants in `internal/domain/models` are the application-facing source f
 - Repository methods must scope user, role, invitation, and audit access to the correct tenant even when the database foreign key alone cannot express the authorization rule.
 - Timestamps are generated in UTC by application/database conventions and expiry comparisons must use current time safely.
 
-## Migration warning
+## Migration baseline
 
-The repository currently has two overlapping schema histories:
+The former overlapping `0001` and `001`–`007` histories were replaced by the single authoritative `000001_init_schema.up.sql` baseline. It creates all 11 application tables in dependency order with the fields, foreign keys, enum checks, uniqueness rules, timestamps, and indexes consumed by the application.
 
-- `0001_init_schema.up.sql` creates the full schema.
-- `001_create_tenants.up.sql` through `007_add_trace_id_to_audit.up.sql` create substantially the same schema incrementally.
-
-Do not assume both lineages can be applied to an empty database without conflict. Before release, choose one baseline, verify it against repository queries and models, and add forward-only migrations for subsequent changes.
+Existing databases from either removed lineage are not upgraded in place. Export required data, validate it against the authoritative model, and import it into a freshly migrated database. See the [migration operations guide](migrations.md).
 
 ## Reference artifacts
 

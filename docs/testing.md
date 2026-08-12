@@ -7,7 +7,7 @@ The checked-in tests concentrate on configuration, infrastructure connectivity, 
 | Area | Evidence in the repository | Current gap |
 |---|---|---|
 | Configuration | Environment loading, defaults, invalid-value fallback, PostgreSQL/Redis integration | No notable gap in the loader's current behavior |
-| Test infrastructure | PostgreSQL and Redis Testcontainers, connection validation | CI execution is not documented or configured here |
+| Test infrastructure | PostgreSQL and Redis Testcontainers, connection validation, and clean migration bootstrap | Requires Docker locally and in CI |
 | Tenant repository | Tenant and invitation CRUD, personal/organization cases | Service-level tenant rules are not covered |
 | User repository | CRUD, status, role, password, last-login, duplicate email | Authorization rules are not covered |
 | Auth repository | Sessions and refresh-token lifecycle | Full login/token workflows are not covered |
@@ -43,6 +43,8 @@ go tool cover -func=coverage.out
 ```
 
 Many tests start PostgreSQL 15 Alpine and Redis 7 Alpine through Testcontainers. They require a working Docker daemon and may be slower on the first run while images are downloaded.
+
+Migration tests apply files through `golang-migrate`, the same engine used by `cmd/migrate`. They must not execute SQL files directly or ignore duplicate-object and syntax errors.
 
 ## Production-readiness priorities
 

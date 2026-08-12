@@ -54,7 +54,7 @@ go run ./cmd/migrate
 
 The migration command reads the same database environment variables and expects to run from the repository root so it can resolve `migrations/`.
 
-> The migration directory currently contains both `0001_init_schema.up.sql` and later numbered schema migrations. Review the migration history for the target database before applying it; overlapping schema definitions may need consolidation.
+The command applies the authoritative baseline and later forward migrations. Existing installations should follow the [migration operations guide](migrations.md) before upgrading.
 
 ## 4. Run the service
 

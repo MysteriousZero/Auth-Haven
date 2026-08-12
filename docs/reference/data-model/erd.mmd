@@ -85,6 +85,7 @@ erDiagram
         smallint status "1=pending, 2=used, 3=expired"
         datetime expires_at
         datetime created_at
+        datetime updated_at
     }
 
     invitations {
@@ -107,6 +108,7 @@ erDiagram
         string metadata "nullable"
         string ip_address
         string user_agent
+        string trace_id "nullable"
         datetime created_at
     }
 
@@ -131,4 +133,4 @@ erDiagram
     users ||--o{ password_resets : "requests"
     users ||--o{ audit_logs : "generates"
 
-    sessions }o--|| devices : "on"
+    sessions }o--o| devices : "on"

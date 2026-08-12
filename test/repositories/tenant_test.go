@@ -51,9 +51,9 @@ func TestTenantRepository_GetTenantByID(t *testing.T) {
 			t.Errorf("Expected tenant name 'Test Organization', got '%s'", tenant.Name)
 		}
 
-		// Note: Type is not stored in database schema, so it will be zero value
-		// This is expected behavior with the current database schema
-		t.Logf("Tenant type from database: %d (expected zero value since type not stored)", tenant.Type)
+		if tenant.Type != models.TenantTypeOrganization {
+			t.Errorf("Expected tenant type %d, got %d", models.TenantTypeOrganization, tenant.Type)
+		}
 
 		if tenant.Status != models.TenantStatusActive {
 			t.Errorf("Expected tenant status %d, got %d", models.TenantStatusActive, tenant.Status)
@@ -86,8 +86,12 @@ func TestTenantRepository_GetTenantByDomain(t *testing.T) {
 
 		if foundTenant.Domain == nil || tenant.Domain == nil || *foundTenant.Domain != *tenant.Domain {
 			var expected, got string
-			if tenant.Domain != nil { expected = *tenant.Domain }
-			if foundTenant.Domain != nil { got = *foundTenant.Domain }
+			if tenant.Domain != nil {
+				expected = *tenant.Domain
+			}
+			if foundTenant.Domain != nil {
+				got = *foundTenant.Domain
+			}
 			t.Errorf("Expected domain %v, got %v", expected, got)
 		}
 	})
@@ -129,8 +133,9 @@ func TestTenantRepository_UpdateTenant(t *testing.T) {
 			t.Errorf("Expected updated status %d, got %d", models.TenantStatusSuspended, updatedTenant.Status)
 		}
 
-		// Note: Type is not stored in database schema, so it will be zero value
-		t.Logf("Updated tenant type: %d (expected zero value since type not stored)", updatedTenant.Type)
+		if updatedTenant.Type != models.TenantTypeOrganization {
+			t.Errorf("Expected tenant type %d, got %d", models.TenantTypeOrganization, updatedTenant.Type)
+		}
 	})
 }
 

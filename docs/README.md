@@ -5,6 +5,7 @@
 - [Project overview](overview.md) — purpose, capabilities, technology, and implementation status
 - [Architecture](architecture.md) — layers, request flow, data stores, and source layout
 - [Data model](data-model.md) — tables, relationships, invariants, and migration warning
+- [Migration operations](migrations.md) — authoritative baseline, legacy rebuilds, and rollback safety
 - [Security architecture](security.md) — authentication, isolation, validation, audit, and cache invariants
 - [Getting started](getting-started.md) — prerequisites, local infrastructure, migrations, and startup
 - [Configuration](configuration.md) — environment variables and production-sensitive settings
