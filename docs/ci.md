@@ -8,7 +8,7 @@ Pull requests to `main` run independent required gates so failures identify the 
 | `Contracts and docs` | Protobuf regeneration drift, local Markdown links, and issue-form YAML | under 10 minutes |
 | `Race` | Race detector for application and command packages | under 15 minutes |
 | `Testcontainers and migrations` | Race-enabled PostgreSQL/Redis repositories, bootstrap, idempotency, and legacy-state rejection | under 25 minutes |
-| `Secret scan` | Full-history credential scanning | under 10 minutes |
+| `Secret scan` | Full-history credential scanning with gitleaks v8.30.1 | under 10 minutes |
 | `Dependency review` | Blocks newly introduced high or critical dependency vulnerabilities | under 10 minutes |
 | `Analyze Go` | CodeQL security-and-quality analysis | under 15 minutes |
 | `Validate pull request metadata` | Required PR sections, label, assignee, and milestone | under 5 minutes |
