@@ -1,0 +1,42 @@
+name: Feature request
+description: Propose a scoped capability or improvement
+title: "feature: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or developer problem should this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe observable behavior and boundaries, not only an implementation.
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Contract and data impact
+      description: Note expected HTTP/gRPC, protobuf, schema, migration, or configuration changes.
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and tenant-isolation impact
+      description: Explain authorization, sensitive-data, audit, token/session, and cross-tenant considerations.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List concrete outcomes and important failure cases.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true

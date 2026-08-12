@@ -1,0 +1,65 @@
+name: Pull request metadata
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+      - assigned
+      - unassigned
+      - milestoned
+      - demilestoned
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    name: Validate pull request metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          body="$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")"
+          errors=()
+
+          for heading in \
+            "## Summary" \
+            "## Linked work" \
+            "## Security and privacy impact" \
+            "## Verification" \
+            "## Documentation" \
+            "## Release notes"
+          do
+            if ! grep -Fq "$heading" <<<"$body"; then
+              errors+=("Missing required body section: $heading")
+            fi
+          done
+
+          if [[ "$(jq '.pull_request.labels | length' "$GITHUB_EVENT_PATH")" -eq 0 ]]; then
+            errors+=("Apply at least one suitable default label")
+          fi
+
+          if [[ "$(jq '.pull_request.assignees | length' "$GITHUB_EVENT_PATH")" -eq 0 ]]; then
+            errors+=("Set an accountable assignee")
+          fi
+
+          if [[ "$(jq -r '.pull_request.milestone == null' "$GITHUB_EVENT_PATH")" == "true" ]]; then
+            errors+=("Select a release milestone")
+          fi
+
+          if (( ${#errors[@]} > 0 )); then
+            printf '::error::%s\n' "${errors[@]}"
+            exit 1
+          fi
+
+          echo "Pull request metadata is complete."

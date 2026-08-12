@@ -1,0 +1,13 @@
+# Default repository owner and reviewer.
+* @MysteriousZero
+
+# Security-sensitive implementation and policy.
+/internal/middleware/ @MysteriousZero
+/internal/service/ @MysteriousZero
+/internal/utils/ @MysteriousZero
+/migrations/ @MysteriousZero
+/SECURITY.md @MysteriousZero
+
+# Public API contracts and generated artifacts.
+/api/proto/ @MysteriousZero
+/pkg/proto/ @MysteriousZero

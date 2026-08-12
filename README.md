@@ -1,71 +1,79 @@
 # Auth Haven
 
-**Auth Haven** is a robust, spec-driven Authentication and Authorization service built with Go, gRPC, and REST.
+Auth Haven is a documentation-driven, multi-tenant authentication and authorization service written in Go. It offers HTTP/JSON and gRPC interfaces backed by PostgreSQL, with Redis used for caching and request rate limiting.
 
-The project follows a **Spec-Driven Development** approach, where implementation is continuously assessed against a set of formal specifications in the `spec/` directory.
+> Auth Haven is under active development. It is not currently documented as production-ready; review [known gaps](PROJECT.md#known-gaps) and the [testing guide](docs/testing.md) before deployment.
 
-## Current Progress
+## Capabilities
 
-For the latest implementation score and compliance gaps, please refer to:
-👉 **[spec_implementation_status.md](./spec_implementation_status.md)**
+- Individual, organization-domain, and invitation-based registration
+- Password authentication with JWT access tokens and rotating refresh tokens
+- TOTP multi-factor authentication
+- Password reset and authenticated password changes
+- Session and device management
+- Tenant roles, invitations, and audit logging
+- PostgreSQL persistence and Redis-backed caching/rate limits
+- HTTP and gRPC transports over shared domain services
 
----
+## Quick start
 
-## 🛠️ Development Environment
-
-The project includes a fully-configured **VS Code Dev Container** for a consistent development experience. It comes pre-installed with:
-- **Go toolchain** and language server.
-- **Protobuf/gRPC tools** (including UI helpers).
-- **Linters** (`golangci-lint`).
-- **Docker** support.
-
-We **strongly recommend** using this setup if you are using VS Code. Simply open the folder and select **"Reopen in Container"** when prompted.
-
----
-
-## Getting Started
-
-### 📡 Protobuf / gRPC Generation
-
-To generate the Go code from your `.proto` definitions, run the following command from the project root:
+The recommended environment is the included VS Code Dev Container. For a local shell, install Go 1.25.1 or newer, Docker, PostgreSQL, and Redis.
 
 ```bash
-protoc --go_out=. \
-       --go-grpc_out=. \
-       --go_opt=paths=source_relative \
-       --go-grpc_opt=paths=source_relative \
-       api/proto/*.proto \
-       api/proto/common/*.proto
+# Start the PostgreSQL service declared by this repository.
+docker compose up -d db
+
+# Supply a stable 32-byte MFA encryption key.
+export MFA_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+
+# Configure DB_* and REDIS_* variables, then:
+go run ./cmd/migrate
+go run ./cmd/server
 ```
 
-Generated files will be located in `pkg/proto/`.
+The default endpoints are HTTP `http://localhost:8080`, gRPC `localhost:50051`, and health check `GET /health`. The root Compose file starts PostgreSQL only; see the [complete setup guide](docs/getting-started.md) before running the commands above.
 
-### 🐳 Running with Docker
+## Documentation
 
-The easiest way to start the application (including all dependencies) is via Docker Compose:
+| Document | Purpose |
+|---|---|
+| [Project](PROJECT.md) | Scope, status, principles, and roadmap |
+| [Documentation index](docs/README.md) | All implementation and operations guides |
+| [Architecture](docs/architecture.md) | Components, dependency flow, and source layout |
+| [Data model](docs/data-model.md) | Tables, relationships, and migration constraints |
+| [Security architecture](docs/security.md) | Authentication, isolation, validation, audit, and caching rules |
+| [API guide](docs/api.md) | Currently registered HTTP routes and gRPC methods |
+| [Configuration](docs/configuration.md) | Environment variables and security-sensitive settings |
+| [Development](docs/development.md) | Local workflow and protobuf generation |
+| [Testing](docs/testing.md) | Existing coverage and commands |
+| [AI development](docs/ai-development.md) | Task workflow and context map for coding agents |
+| [AI agent rules](AGENTS.md) | Canonical repository instructions for coding agents |
+| [Contributing](CONTRIBUTING.md) | Contribution and review requirements |
+| [Security](SECURITY.md) | Vulnerability reporting and security expectations |
+| [Support](SUPPORT.md) | Help channels and bug-report guidance |
+
+## Repository layout
+
+```text
+api/proto/       Protobuf source contracts
+cmd/             Server and migration executables
+docs/            Current implementation and operating guides
+internal/        Private domain, service, repository, and transport code
+migrations/      PostgreSQL migrations
+pkg/proto/       Generated protobuf code
+test/            Testcontainers, configuration, repository, and cache tests
+```
+
+## Development
 
 ```bash
-docker compose up --build
+gofmt -w path/to/changed.go
+go vet ./...
+go test ./...
 ```
 
-The application will be available at [http://localhost:8080](http://localhost:8080).
+Integration tests require a working Docker daemon. Changes to behavior should update documentation and tests together when applicable. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full checklist.
 
----
+## License
 
-## Testing
-
-For comprehensive test coverage status and production readiness assessment, please refer to:
-**[tests.md](./tests.md)** - Complete test coverage analysis across all architectural layers
-
-**Current Status**: Repository layer has basic CRUD coverage but **missing critical transaction and rollback testing**.
-
----
-
-## Project Structure
-
-*   `api/proto/`: Source Protobuf definitions.
-*   `cmd/`: Main entry points for the server.
-*   `internal/`: Private application code (Repositories, Services, Handlers).
-*   `pkg/proto/`: Generated gRPC and Protobuf code.
-*   `spec/`: Core specifications (DB, Domain, gRPC, REST, Security).
-*   `test/`: Comprehensive test suite including repository and integration tests.
+No license file is currently present. Unless a license is added, normal copyright restrictions apply.

@@ -1,0 +1,67 @@
+name: Bug report
+description: Report reproducible incorrect behavior in Auth Haven
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not use this form for vulnerabilities. Follow `SECURITY.md` and remove all secrets, tokens, credentials, and personal data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what should have happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest repeatable sequence, including sanitized inputs.
+      placeholder: |
+        1. Configure ...
+        2. Call ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Commit, Go version, OS, execution method, and relevant PostgreSQL/Redis versions.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - HTTP API
+        - gRPC API
+        - Authentication or tokens
+        - MFA or password recovery
+        - Tenant authorization or roles
+        - PostgreSQL or migrations
+        - Redis, caching, or rate limiting
+        - Tests or development tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Include relevant errors without credentials, tokens, personal data, or `.env` contents.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed secrets, tokens, credentials, and personal data.
+          required: true
+        - label: This is not a privately reportable security vulnerability.
+          required: true
