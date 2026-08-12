@@ -15,13 +15,13 @@ type CustomValidator struct {
 
 func NewCustomValidator() *CustomValidator {
 	v := validator.New()
-	
+
 	// Register custom validation functions
 	v.RegisterValidation("complexpassword", validateComplexPassword)
 	v.RegisterValidation("publicemail", validatePublicEmail)
 	v.RegisterValidation("uuid", validateUUID)
 	v.RegisterValidation("phonenumber", validatePhoneNumber)
-	
+
 	return &CustomValidator{validator: v}
 }
 
@@ -43,42 +43,42 @@ func (cv *CustomValidator) ValidateVar(field interface{}, tag string) error {
 
 func validateComplexPassword(fl validator.FieldLevel) bool {
 	password := fl.Field().String()
-	
+
 	// At least 12 characters (as per spec)
 	if len(password) < 12 {
 		return false
 	}
-	
+
 	// At least one uppercase letter
 	hasUpper := regexp.MustCompile(`[A-Z]`).MatchString(password)
 	if !hasUpper {
 		return false
 	}
-	
+
 	// At least one lowercase letter
 	hasLower := regexp.MustCompile(`[a-z]`).MatchString(password)
 	if !hasLower {
 		return false
 	}
-	
+
 	// At least one digit
 	hasDigit := regexp.MustCompile(`[0-9]`).MatchString(password)
 	if !hasDigit {
 		return false
 	}
-	
+
 	// At least one special character
 	hasSpecial := regexp.MustCompile(`[!@#$%^&*(),.?":{}|<>]`).MatchString(password)
 	if !hasSpecial {
 		return false
 	}
-	
+
 	return true
 }
 
 func validatePublicEmail(fl validator.FieldLevel) bool {
 	email := strings.ToLower(fl.Field().String())
-	
+
 	// List of public email domains that should be blocked for org registration
 	publicDomains := []string{
 		"gmail.com",
@@ -111,54 +111,54 @@ func validatePublicEmail(fl validator.FieldLevel) bool {
 		"globo.com",
 		"r7.com",
 	}
-	
+
 	// Extract domain from email
 	parts := strings.Split(email, "@")
 	if len(parts) != 2 {
 		return false // Invalid email format
 	}
-	
+
 	domain := parts[1]
-	
+
 	// Check if domain is in the public domains list
 	for _, publicDomain := range publicDomains {
 		if domain == publicDomain {
 			return false // Public email domain found
 		}
 	}
-	
+
 	return true // Not a public email domain
 }
 
 func validateUUID(fl validator.FieldLevel) bool {
 	uuid := fl.Field().String()
-	
+
 	// UUID v4 pattern: 8-4-4-4-12 hexadecimal digits
 	pattern := `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`
 	matched, err := regexp.MatchString(pattern, uuid)
 	if err != nil {
 		return false
 	}
-	
+
 	return matched
 }
 
 func validatePhoneNumber(fl validator.FieldLevel) bool {
 	phone := fl.Field().String()
-	
+
 	// Remove all non-digit characters
 	digits := regexp.MustCompile(`[^\d]`).ReplaceAllString(phone, "")
-	
+
 	// Check if it has between 10 and 15 digits (typical phone number range)
 	if len(digits) < 10 || len(digits) > 15 {
 		return false
 	}
-	
+
 	// Check if it starts with + (international format)
 	if !strings.HasPrefix(phone, "+") {
 		return false
 	}
-	
+
 	return true
 }
 
@@ -190,6 +190,6 @@ func GetValidationErrorMessage(err error) string {
 		}
 		return strings.Join(messages, "; ")
 	}
-	
+
 	return err.Error()
 }

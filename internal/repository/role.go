@@ -424,4 +424,3 @@ func (r *deviceRepository) UpdateDeviceLastSeen(ctx context.Context, deviceID st
 
 	return nil
 }
-

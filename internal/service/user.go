@@ -124,8 +124,7 @@ func (s *userService) UpdateUserStatus(ctx context.Context, actorID, targetUserI
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -278,8 +277,7 @@ func (s *registrationService) RegisterIndividual(ctx context.Context, email, pas
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -452,8 +450,7 @@ func (s *registrationService) RegisterOrgUser(ctx context.Context, email, passwo
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -523,8 +520,7 @@ func (s *registrationService) RegisterWithInvitation(ctx context.Context, invita
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -536,4 +532,3 @@ func (s *registrationService) RegisterWithInvitation(ctx context.Context, invita
 	user.PasswordHash = ""
 	return user, nil
 }
-

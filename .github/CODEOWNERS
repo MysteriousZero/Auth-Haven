@@ -7,6 +7,9 @@
 /internal/utils/ @MysteriousZero
 /migrations/ @MysteriousZero
 /SECURITY.md @MysteriousZero
+/.github/workflows/ @MysteriousZero
+/scripts/ @MysteriousZero
+/tools/ci/ @MysteriousZero
 
 # Public API contracts and generated artifacts.
 /api/proto/ @MysteriousZero

@@ -86,4 +86,3 @@ func (s *auditService) ListTenantLogs(ctx context.Context, actorID, tenantID, cu
 
 	return logs, nextCursor, nil
 }
-

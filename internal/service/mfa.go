@@ -17,11 +17,11 @@ import (
 )
 
 type mfaService struct {
-	mfaRepo   interfaces.MFAMethodRepository
-	userRepo  interfaces.UserRepository
-	auditRepo      interfaces.AuditRepository
-	totpGen        interfaces.TOTPGenerator
-	encryptionKey  []byte
+	mfaRepo       interfaces.MFAMethodRepository
+	userRepo      interfaces.UserRepository
+	auditRepo     interfaces.AuditRepository
+	totpGen       interfaces.TOTPGenerator
+	encryptionKey []byte
 }
 
 func NewMFAService(
@@ -93,8 +93,7 @@ func (s *mfaService) EnrollTOTP(ctx context.Context, userID string) (*models.TOT
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -155,8 +154,7 @@ func (s *mfaService) ActivateTOTP(ctx context.Context, userID, mfaID, code strin
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return errors.ErrInvalidMFACode
 	}
@@ -182,8 +180,7 @@ func (s *mfaService) ActivateTOTP(ctx context.Context, userID, mfaID, code strin
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -251,8 +248,7 @@ func (s *mfaService) EnrollSMS(ctx context.Context, userID, phoneNumber string) 
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		}
 		s.auditRepo.CreateAuditLog(ctx, auditLog)
 	}
@@ -303,8 +299,7 @@ func (s *mfaService) ActivateSMS(ctx context.Context, userID, mfaID, code string
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return errors.ErrInvalidMFACode
 	}
@@ -330,8 +325,7 @@ func (s *mfaService) ActivateSMS(ctx context.Context, userID, mfaID, code string
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -386,8 +380,7 @@ func (s *mfaService) DisableMFAMethod(ctx context.Context, userID, mfaID string)
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -459,8 +452,7 @@ func (s *mfaService) DeleteMFAMethod(ctx context.Context, userID, mfaID string) 
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	if err := s.auditRepo.CreateAuditLog(ctx, auditLog); err != nil {
@@ -503,4 +495,3 @@ func (s *mfaService) isValidPhoneNumber(phoneNumber string) bool {
 	// In production, use a proper phone number validation library
 	return len(phoneNumber) >= 10 && strings.HasPrefix(phoneNumber, "+")
 }
-

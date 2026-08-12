@@ -190,13 +190,13 @@ func (h *AuthHandler) LogoutAll(c *gin.Context) {
 // Registration handlers
 type RegistrationHandler struct {
 	registrationService interfaces.RegistrationService
-	validator          *validation.CustomValidator
+	validator           *validation.CustomValidator
 }
 
 func NewRegistrationHandler(registrationService interfaces.RegistrationService) *RegistrationHandler {
 	return &RegistrationHandler{
 		registrationService: registrationService,
-		validator:          validation.NewCustomValidator(),
+		validator:           validation.NewCustomValidator(),
 	}
 }
 

@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package auth;
 option go_package = "auth-haven/pkg/proto";
-import "common/Tokens.proto";  // <-- import the file that has Tokens
-
 service UserService {
   rpc CreatePersonalUser(CreatePersonalUserRequest) returns (RegisterResponse);
   rpc CreateCompanyAndOwner(CreateCompanyAndOwnerRequest) returns (RegisterResponse);

@@ -23,15 +23,15 @@ func TestDatabaseConfigWithTestcontainer(t *testing.T) {
 
 	// Set environment variables with testcontainer values
 	envVars := map[string]string{
-		"DB_HOST":               pc.Host,
-		"DB_PORT":               pc.Port,
-		"DB_USER":               pc.Username,
-		"DB_PASSWORD":           pc.Password,
-		"DB_NAME":               pc.Database,
-		"DB_SSLMODE":            "disable",
-		"DB_MAX_CONNECTIONS":    "25",
-		"DB_MAX_IDLE_CONNS":     "5",
-		"DB_CONN_MAX_LIFETIME":  "5m",
+		"DB_HOST":              pc.Host,
+		"DB_PORT":              pc.Port,
+		"DB_USER":              pc.Username,
+		"DB_PASSWORD":          pc.Password,
+		"DB_NAME":              pc.Database,
+		"DB_SSLMODE":           "disable",
+		"DB_MAX_CONNECTIONS":   "25",
+		"DB_MAX_IDLE_CONNS":    "5",
+		"DB_CONN_MAX_LIFETIME": "5m",
 	}
 
 	// Helper function to set environment variables
@@ -192,19 +192,19 @@ func TestBothConfigsConcurrent(t *testing.T) {
 
 	// Set environment variables with testcontainer values
 	envVars := map[string]string{
-		"DB_HOST":               pc.Host,
-		"DB_PORT":               pc.Port,
-		"DB_USER":               pc.Username,
-		"DB_PASSWORD":           pc.Password,
-		"DB_NAME":               pc.Database,
-		"DB_SSLMODE":            "disable",
-		"DB_MAX_CONNECTIONS":    "25",
-		"DB_MAX_IDLE_CONNS":     "5",
-		"DB_CONN_MAX_LIFETIME":  "5m",
-		"REDIS_HOST":            rc.Host,
-		"REDIS_PORT":            rc.Port,
-		"REDIS_PASSWORD":        "",
-		"REDIS_DB":              "0",
+		"DB_HOST":              pc.Host,
+		"DB_PORT":              pc.Port,
+		"DB_USER":              pc.Username,
+		"DB_PASSWORD":          pc.Password,
+		"DB_NAME":              pc.Database,
+		"DB_SSLMODE":           "disable",
+		"DB_MAX_CONNECTIONS":   "25",
+		"DB_MAX_IDLE_CONNS":    "5",
+		"DB_CONN_MAX_LIFETIME": "5m",
+		"REDIS_HOST":           rc.Host,
+		"REDIS_PORT":           rc.Port,
+		"REDIS_PASSWORD":       "",
+		"REDIS_DB":             "0",
 	}
 
 	// Helper function to set environment variables
@@ -318,19 +318,19 @@ func TestConfigConnectionValidation(t *testing.T) {
 
 	// Set environment variables with testcontainer values
 	envVars := map[string]string{
-		"DB_HOST":               pc.Host,
-		"DB_PORT":               pc.Port,
-		"DB_USER":               pc.Username,
-		"DB_PASSWORD":           pc.Password,
-		"DB_NAME":               pc.Database,
-		"DB_SSLMODE":            "disable",
-		"DB_MAX_CONNECTIONS":    "25",
-		"DB_MAX_IDLE_CONNS":     "5",
-		"DB_CONN_MAX_LIFETIME":  "5m",
-		"REDIS_HOST":            rc.Host,
-		"REDIS_PORT":            rc.Port,
-		"REDIS_PASSWORD":        "",
-		"REDIS_DB":              "0",
+		"DB_HOST":              pc.Host,
+		"DB_PORT":              pc.Port,
+		"DB_USER":              pc.Username,
+		"DB_PASSWORD":          pc.Password,
+		"DB_NAME":              pc.Database,
+		"DB_SSLMODE":           "disable",
+		"DB_MAX_CONNECTIONS":   "25",
+		"DB_MAX_IDLE_CONNS":    "5",
+		"DB_CONN_MAX_LIFETIME": "5m",
+		"REDIS_HOST":           rc.Host,
+		"REDIS_PORT":           rc.Port,
+		"REDIS_PASSWORD":       "",
+		"REDIS_DB":             "0",
 	}
 
 	// Helper function to set environment variables
@@ -399,19 +399,19 @@ func TestConfigValuesMatchTestcontainer(t *testing.T) {
 
 	// Set environment variables with testcontainer values
 	envVars := map[string]string{
-		"DB_HOST":               pc.Host,
-		"DB_PORT":               "5432", // Original PostgreSQL port
-		"DB_USER":               pc.Username,
-		"DB_PASSWORD":           pc.Password,
-		"DB_NAME":               pc.Database,
-		"DB_SSLMODE":            "disable",
-		"DB_MAX_CONNECTIONS":    "25",
-		"DB_MAX_IDLE_CONNS":     "5",
-		"DB_CONN_MAX_LIFETIME":  "5m",
-		"REDIS_HOST":            rc.Host,
-		"REDIS_PORT":            "6379", // Original Redis port
-		"REDIS_PASSWORD":        "",
-		"REDIS_DB":              "0",
+		"DB_HOST":              pc.Host,
+		"DB_PORT":              "5432", // Original PostgreSQL port
+		"DB_USER":              pc.Username,
+		"DB_PASSWORD":          pc.Password,
+		"DB_NAME":              pc.Database,
+		"DB_SSLMODE":           "disable",
+		"DB_MAX_CONNECTIONS":   "25",
+		"DB_MAX_IDLE_CONNS":    "5",
+		"DB_CONN_MAX_LIFETIME": "5m",
+		"REDIS_HOST":           rc.Host,
+		"REDIS_PORT":           "6379", // Original Redis port
+		"REDIS_PASSWORD":       "",
+		"REDIS_DB":             "0",
 	}
 
 	// Helper function to set environment variables
@@ -440,7 +440,7 @@ func TestConfigValuesMatchTestcontainer(t *testing.T) {
 
 	// Test that config values match expected testcontainer settings
 	tests := []struct {
-		name     string
+		name      string
 		configVal interface{}
 		expected  interface{}
 	}{

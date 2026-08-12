@@ -23,12 +23,12 @@ type Device struct {
 }
 
 type RefreshToken struct {
-	TokenID    string    `json:"token_id" db:"token_id"`
-	UserID     string    `json:"user_id" db:"user_id"`
-	TokenHash  string    `json:"-" db:"token_hash"`
-	UserAgent  string    `json:"user_agent" db:"user_agent"`
-	IPAddress  string    `json:"ip_address" db:"ip_address"`
-	Revoked    bool      `json:"revoked" db:"revoked"`
-	ExpiresAt  time.Time `json:"expires_at" db:"expires_at"`
-	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	TokenID   string    `json:"token_id" db:"token_id"`
+	UserID    string    `json:"user_id" db:"user_id"`
+	TokenHash string    `json:"-" db:"token_hash"`
+	UserAgent string    `json:"user_agent" db:"user_agent"`
+	IPAddress string    `json:"ip_address" db:"ip_address"`
+	Revoked   bool      `json:"revoked" db:"revoked"`
+	ExpiresAt time.Time `json:"expires_at" db:"expires_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }

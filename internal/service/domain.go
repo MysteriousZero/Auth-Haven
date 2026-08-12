@@ -29,19 +29,19 @@ func (d *domainChecker) IsPublicDomain(email string) bool {
 	}
 
 	domain := strings.ToLower(parts[1])
-	
+
 	// Check exact match
 	if d.publicDomains[domain] {
 		return true
 	}
-	
+
 	// Check subdomains of public domains
 	for publicDomain := range d.publicDomains {
 		if strings.HasSuffix(domain, "."+publicDomain) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -123,7 +123,6 @@ func getPublicDomainList() map[string]bool {
 	for _, domain := range domains {
 		domainMap[domain] = true
 	}
-	
+
 	return domainMap
 }
-

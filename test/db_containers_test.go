@@ -39,7 +39,7 @@ func TestRedisContainerConnection(t *testing.T) {
 
 	// Test basic Redis operations
 	ctx := context.Background()
-	
+
 	// Set a key
 	err := rc.Client.Set(ctx, "test_key", "Hello, Redis!", 0).Err()
 	if err != nil {
@@ -175,7 +175,7 @@ func TestGetConnectionStrings(t *testing.T) {
 		t.Error("PostgreSQL connection string is empty")
 	}
 
-	expectedPGFormat := fmt.Sprintf("host=%s port=%s user=postgres password=postgres dbname=auth_haven_test sslmode=disable", 
+	expectedPGFormat := fmt.Sprintf("host=%s port=%s user=postgres password=postgres dbname=auth_haven_test sslmode=disable",
 		pc.Host, pc.Port)
 	if pgConnStr != expectedPGFormat {
 		t.Errorf("PostgreSQL connection string format mismatch. Expected: %s, Got: %s", expectedPGFormat, pgConnStr)

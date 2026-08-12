@@ -38,10 +38,10 @@ func (s *tenantService) CreateTenant(ctx context.Context, name, domain string) (
 
 	// Create tenant
 	tenant := &models.Tenant{
-		Name:     name,
-		Domain:   &domain,
-		Type:     models.TenantTypeOrganization,
-		Status:   models.TenantStatusActive,
+		Name:      name,
+		Domain:    &domain,
+		Type:      models.TenantTypeOrganization,
+		Status:    models.TenantStatusActive,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -94,4 +94,3 @@ func (s *tenantService) UpdateTenantStatus(ctx context.Context, actorID, tenantI
 
 	return nil
 }
-

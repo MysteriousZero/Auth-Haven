@@ -12,15 +12,15 @@ import (
 func TestLoadDatabaseConfigFromEnv(t *testing.T) {
 	// Set up environment variables
 	envVars := map[string]string{
-		"DB_HOST":               "localhost",
-		"DB_PORT":               "5432",
-		"DB_USER":               "postgres",
-		"DB_PASSWORD":           "postgres",
-		"DB_NAME":               "auth_haven_test",
-		"DB_SSLMODE":            "disable",
-		"DB_MAX_CONNECTIONS":    "25",
-		"DB_MAX_IDLE_CONNS":     "5",
-		"DB_CONN_MAX_LIFETIME":  "5m",
+		"DB_HOST":              "localhost",
+		"DB_PORT":              "5432",
+		"DB_USER":              "postgres",
+		"DB_PASSWORD":          "postgres",
+		"DB_NAME":              "auth_haven_test",
+		"DB_SSLMODE":           "disable",
+		"DB_MAX_CONNECTIONS":   "25",
+		"DB_MAX_IDLE_CONNS":    "5",
+		"DB_CONN_MAX_LIFETIME": "5m",
 	}
 
 	// Helper function to set environment variables
@@ -204,12 +204,12 @@ func TestConfigFallbackValues(t *testing.T) {
 func TestInvalidEnvironmentValues(t *testing.T) {
 	// Set up invalid environment variables
 	envVars := map[string]string{
-		"DB_PORT":               "invalid_port",
-		"DB_MAX_CONNECTIONS":    "invalid_connections",
-		"DB_MAX_IDLE_CONNS":     "invalid_idle",
-		"DB_CONN_MAX_LIFETIME":  "invalid_duration",
-		"REDIS_PORT":            "invalid_redis_port",
-		"REDIS_DB":              "invalid_redis_db",
+		"DB_PORT":              "invalid_port",
+		"DB_MAX_CONNECTIONS":   "invalid_connections",
+		"DB_MAX_IDLE_CONNS":    "invalid_idle",
+		"DB_CONN_MAX_LIFETIME": "invalid_duration",
+		"REDIS_PORT":           "invalid_redis_port",
+		"REDIS_DB":             "invalid_redis_db",
 	}
 
 	// Helper function to set environment variables
@@ -242,12 +242,12 @@ func TestInvalidEnvironmentValues(t *testing.T) {
 		got      interface{}
 		expected interface{}
 	}{
-		{"DB_Port", cfg.Database.Port, 5432},                    // fallback
-		{"DB_MaxConnections", cfg.Database.MaxConnections, 25},  // fallback
-		{"DB_MaxIdleConns", cfg.Database.MaxIdleConns, 5},        // fallback
+		{"DB_Port", cfg.Database.Port, 5432},                                  // fallback
+		{"DB_MaxConnections", cfg.Database.MaxConnections, 25},                // fallback
+		{"DB_MaxIdleConns", cfg.Database.MaxIdleConns, 5},                     // fallback
 		{"DB_ConnMaxLifetime", cfg.Database.ConnMaxLifetime, 5 * time.Minute}, // fallback
-		{"Redis_Port", cfg.Redis.Port, 6379},                    // fallback
-		{"Redis_DB", cfg.Redis.DB, 0},                           // fallback
+		{"Redis_Port", cfg.Redis.Port, 6379},                                  // fallback
+		{"Redis_DB", cfg.Redis.DB, 0},                                         // fallback
 	}
 
 	for _, tt := range tests {
