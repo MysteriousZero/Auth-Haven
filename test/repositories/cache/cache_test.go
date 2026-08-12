@@ -4,9 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -82,48 +79,6 @@ func DropAllTables(t *testing.T, db *sql.DB) {
 	}
 }
 
-// RunMigrations executes all SQL migration files
-func RunMigrations(t *testing.T, db *sql.DB) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	migrationFiles := []string{
-		"0001_init_schema.up.sql",
-		"001_create_tenants.up.sql",
-		"002_create_users.up.sql",
-		"003_create_roles.up.sql",
-		"004_create_sessions_tokens.up.sql",
-		"005_create_mfa_password_resets.up.sql",
-		"006_create_audit_logs.up.sql",
-		"007_add_trace_id_to_audit.up.sql",
-	}
-
-	migrationDir := "../../../migrations"
-
-	for _, filename := range migrationFiles {
-		migrationPath := filepath.Join(migrationDir, filename)
-
-		content, err := os.ReadFile(migrationPath)
-		if err != nil {
-			t.Fatalf("Failed to read migration file %s: %v", filename, err)
-		}
-
-		_, err = db.ExecContext(ctx, string(content))
-		if err != nil {
-			// Check for specific errors that we can ignore
-			if strings.Contains(err.Error(), "already exists") ||
-				strings.Contains(err.Error(), "does not exist") ||
-				strings.Contains(err.Error(), "syntax error") {
-				t.Logf("Migration %s: relations already exist, skipping", filename)
-				continue
-			}
-			t.Fatalf("Failed to execute migration %s: %v", filename, err)
-		}
-
-		t.Logf("Successfully executed migration: %s", filename)
-	}
-}
-
 // CacheTestSuite holds the test infrastructure for cache tests
 type CacheTestSuite struct {
 	DB       *sql.DB
@@ -144,7 +99,7 @@ func SetupCacheTestSuite(t *testing.T) *CacheTestSuite {
 	DropAllTables(t, pc.DB)
 
 	// Run database migrations
-	RunMigrations(t, pc.DB)
+	container.RunMigrations(t, pc.Database, pc.DB)
 
 	// Create Redis cache
 	cache := repository.NewRedisCache(rc.Client)
@@ -174,14 +129,15 @@ func createTestTenant(t *testing.T, db *sql.DB) string {
 	tenant := testdata.CreateTestTenant(models.TenantTypeOrganization)
 
 	query := `
-		INSERT INTO tenants (tenant_id, name, domain, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO tenants (tenant_id, name, domain, type, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	_, err := db.ExecContext(ctx, query,
 		tenant.TenantID,
 		tenant.Name,
 		tenant.Domain,
+		tenant.Type,
 		tenant.Status,
 		tenant.CreatedAt,
 		tenant.UpdatedAt,

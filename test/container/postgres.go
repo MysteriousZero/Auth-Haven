@@ -36,7 +36,7 @@ func SetupPostgresContainer(t *testing.T) *PostgresContainer {
 		postgres.WithPassword("postgres"),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2). // Wait for the second occurrence (after restart)
+				WithOccurrence(1).
 				WithStartupTimeout(60*time.Second)),
 	)
 	if err != nil {
@@ -65,9 +65,20 @@ func SetupPostgresContainer(t *testing.T) *PostgresContainer {
 		t.Fatalf("Failed to open database connection: %s", err)
 	}
 
-	// Test connection
-	if err := db.Ping(); err != nil {
-		t.Fatalf("Failed to ping database: %s", err)
+	// The image starts PostgreSQL once for initialization and then restarts it.
+	// Podman does not always expose both readiness log lines, so confirm final
+	// readiness through the database connection instead of relying on log count.
+	readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		if err := db.PingContext(readyCtx); err == nil {
+			break
+		}
+		select {
+		case <-readyCtx.Done():
+			t.Fatalf("Failed to ping database before timeout: %s", readyCtx.Err())
+		case <-time.After(200 * time.Millisecond):
+		}
 	}
 
 	return &PostgresContainer{

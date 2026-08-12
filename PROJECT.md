@@ -53,7 +53,6 @@ When these disagree, treat the disagreement as drift to resolve—not as permiss
 - Role services are not wired to HTTP routes.
 - Token TTL configuration is not consistently consumed by token-generation code.
 - Database pool settings are loaded but not applied to `database/sql`.
-- The migration directory contains potentially overlapping initial/schema migrations and needs consolidation before a clean deployment workflow can be guaranteed.
 - Automated tests do not yet adequately cover services, transports, middleware, security, or end-to-end workflows.
 
 ## Roadmap

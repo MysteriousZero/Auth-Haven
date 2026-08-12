@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/testcontainers/testcontainers-go"
 	tcredis "github.com/testcontainers/testcontainers-go/modules/redis"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // RedisContainer holds the test container and Redis client
@@ -24,7 +26,9 @@ func SetupRedisContainer(t *testing.T) *RedisContainer {
 	ctx := context.Background()
 
 	// Create Redis container
-	container, err := tcredis.Run(ctx, "redis:7-alpine")
+	container, err := tcredis.Run(ctx, "redis:7-alpine",
+		testcontainers.WithWaitStrategy(wait.ForListeningPort("6379/tcp").WithStartupTimeout(60*time.Second)),
+	)
 	if err != nil {
 		t.Fatalf("Failed to start Redis container: %s", err)
 	}
@@ -47,9 +51,17 @@ func SetupRedisContainer(t *testing.T) *RedisContainer {
 		DB:       0,  // use default DB
 	})
 
-	// Test connection
-	if err := rdb.Ping(ctx).Err(); err != nil {
-		t.Fatalf("Failed to ping Redis: %s", err)
+	readyCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		if err := rdb.Ping(readyCtx).Err(); err == nil {
+			break
+		}
+		select {
+		case <-readyCtx.Done():
+			t.Fatalf("Failed to ping Redis before timeout: %s", readyCtx.Err())
+		case <-time.After(200 * time.Millisecond):
+		}
 	}
 
 	return &RedisContainer{

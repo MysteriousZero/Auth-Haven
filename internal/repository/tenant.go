@@ -22,7 +22,7 @@ func NewTenantRepository(db *sql.DB) interfaces.TenantRepository {
 
 func (r *tenantRepository) GetTenantByID(ctx context.Context, tenantID string) (*models.Tenant, error) {
 	query := `
-		SELECT tenant_id, name, domain, status, created_at, updated_at
+		SELECT tenant_id, name, domain, type, status, created_at, updated_at
 		FROM tenants
 		WHERE tenant_id = $1
 	`
@@ -32,6 +32,7 @@ func (r *tenantRepository) GetTenantByID(ctx context.Context, tenantID string) (
 		&tenant.TenantID,
 		&tenant.Name,
 		&tenant.Domain,
+		&tenant.Type,
 		&tenant.Status,
 		&tenant.CreatedAt,
 		&tenant.UpdatedAt,
@@ -49,7 +50,7 @@ func (r *tenantRepository) GetTenantByID(ctx context.Context, tenantID string) (
 
 func (r *tenantRepository) GetTenantByDomain(ctx context.Context, domain string) (*models.Tenant, error) {
 	query := `
-		SELECT tenant_id, name, domain, status, created_at, updated_at
+		SELECT tenant_id, name, domain, type, status, created_at, updated_at
 		FROM tenants
 		WHERE domain = $1
 	`
@@ -59,6 +60,7 @@ func (r *tenantRepository) GetTenantByDomain(ctx context.Context, domain string)
 		&tenant.TenantID,
 		&tenant.Name,
 		&tenant.Domain,
+		&tenant.Type,
 		&tenant.Status,
 		&tenant.CreatedAt,
 		&tenant.UpdatedAt,
@@ -76,8 +78,8 @@ func (r *tenantRepository) GetTenantByDomain(ctx context.Context, domain string)
 
 func (r *tenantRepository) CreateTenant(ctx context.Context, tenant *models.Tenant) error {
 	query := `
-		INSERT INTO tenants (tenant_id, name, domain, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO tenants (tenant_id, name, domain, type, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
 	now := time.Now().UTC()
@@ -88,6 +90,7 @@ func (r *tenantRepository) CreateTenant(ctx context.Context, tenant *models.Tena
 		tenant.TenantID,
 		tenant.Name,
 		tenant.Domain,
+		tenant.Type,
 		tenant.Status,
 		tenant.CreatedAt,
 		tenant.UpdatedAt,
