@@ -34,7 +34,6 @@ jobs:
 
           for heading in \
             "## Summary" \
-            "## Linked work" \
             "## Security and privacy impact" \
             "## Verification" \
             "## Documentation" \

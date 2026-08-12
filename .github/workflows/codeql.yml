@@ -1,0 +1,78 @@
+name: CodeQL
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "api/proto/**"
+      - "migrations/**"
+      - "scripts/**"
+      - "Makefile"
+      - "Dockerfile"
+      - "**/Dockerfile"
+      - "docker-compose*.yml"
+      - "docker-compose*.yaml"
+      - ".devcontainer/**"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "api/proto/**"
+      - "migrations/**"
+      - "scripts/**"
+      - "Makefile"
+      - "Dockerfile"
+      - "**/Dockerfile"
+      - "docker-compose*.yml"
+      - "docker-compose*.yaml"
+      - ".devcontainer/**"
+      - ".github/actions/**"
+      - ".github/workflows/**"
+  schedule:
+    - cron: "23 18 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze Go
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: go
+          build-mode: autobuild
+          queries: security-and-quality
+          dependency-caching: true
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:go
