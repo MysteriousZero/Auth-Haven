@@ -13,9 +13,9 @@ The checked-in tests concentrate on configuration, infrastructure connectivity, 
 | Auth repository | Sessions and refresh-token lifecycle | Full login/token workflows are not covered |
 | Transactions | Commit and rollback | Complex multi-service failure paths remain untested |
 | Redis cache wrappers | Hits, misses, population, invalidation, refresh tokens, basic performance comparison | Failure/degraded-mode behavior needs broader coverage |
-| Services | No dedicated tests found | Authentication, registration, MFA, password, invitation, role, session, and audit rules |
+| Services | Token TTL/rotation/restart, persisted auth TTLs, SMTP delivery, password-reset delivery privacy, and invitation delivery failure | Registration, MFA, role, session, and broader audit rules |
 | HTTP/gRPC handlers | No dedicated tests found | Request validation, status mapping, authentication, and contracts |
-| Middleware/security | CORS allowlist and Redis rate-limit outage policies | JWT rejection, tenant isolation, and broader attack cases |
+| Middleware/security | CORS allowlist, Redis rate-limit outage policies, dependency readiness states, pool metrics, and SMTP header injection | JWT rejection, tenant isolation, and broader attack cases |
 | End-to-end workflows | No dedicated tests found | Registration through login, refresh, MFA, and logout |
 
 This summary is based on test files present in the repository, not a measured coverage percentage. Run coverage tooling before making a quantitative claim.

@@ -231,7 +231,11 @@ func corsMiddleware(cfg config.CORSConfig) gin.HandlerFunc {
 	}
 }
 
-func readinessHandler(db *sql.DB, redisClient *redis.Client, redisRequired bool) gin.HandlerFunc {
+type redisPinger interface {
+	Ping(context.Context) *redis.StatusCmd
+}
+
+func readinessHandler(db *sql.DB, redisClient redisPinger, redisRequired bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 		defer cancel()
