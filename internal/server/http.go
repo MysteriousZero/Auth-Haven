@@ -2,6 +2,7 @@ package server
 
 import (
 	"auth-haven/internal/config"
+	"auth-haven/internal/domain/interfaces"
 	"auth-haven/internal/handlers"
 	"auth-haven/internal/middleware"
 	"auth-haven/internal/repository"
@@ -19,7 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func StartHTTP(cfg *config.Config, db *sql.DB) error {
+func StartHTTP(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenService) error {
 	// Initialize Redis
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", cfg.Redis.Host, cfg.Redis.Port),
@@ -51,7 +52,6 @@ func StartHTTP(cfg *config.Config, db *sql.DB) error {
 
 	// Core services
 	hasher := service.NewHasher()
-	tokenService := service.NewTokenService(cfg.Auth.JWTPrivateKey)
 	emailProvider := service.NewEmailProvider("", 0, "", "", "")
 	domainChecker := service.NewDomainChecker()
 	totpGen := service.NewTOTPGenerator()
@@ -68,6 +68,7 @@ func StartHTTP(cfg *config.Config, db *sql.DB) error {
 	// Domain services
 	authService := service.NewAuthService(
 		tenantRepo, userRepo, authRepo, mfaRepo, auditRepo, tokenService, hasher, mfaKey,
+		cfg.Auth.RefreshTokenTTL, cfg.Auth.SessionTTL,
 	)
 	registrationService := service.NewRegistrationService(
 		tenantRepo, userRepo, roleRepo, hasher, auditRepo, domainChecker,

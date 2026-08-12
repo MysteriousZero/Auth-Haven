@@ -2,6 +2,7 @@ package server
 
 import (
 	"auth-haven/internal/config"
+	"auth-haven/internal/domain/interfaces"
 	"auth-haven/internal/handlers"
 	"auth-haven/internal/repository"
 	"auth-haven/internal/service"
@@ -16,7 +17,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func StartGRPC(cfg *config.Config, db *sql.DB) error {
+func StartGRPC(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenService) error {
 	// Initialize repositories
 	tenantRepo := repository.NewTenantRepository(db)
 	userRepo := repository.NewUserRepository(db)
@@ -27,7 +28,6 @@ func StartGRPC(cfg *config.Config, db *sql.DB) error {
 
 	// Initialize services
 	hasher := service.NewHasher()
-	tokenService := service.NewTokenService(cfg.Auth.JWTPrivateKey)
 
 	// Decode MFA encryption key
 	mfaKey, err := base64.StdEncoding.DecodeString(cfg.Security.MFAEncryptionKey)
@@ -47,6 +47,8 @@ func StartGRPC(cfg *config.Config, db *sql.DB) error {
 		tokenService,
 		hasher,
 		mfaKey,
+		cfg.Auth.RefreshTokenTTL,
+		cfg.Auth.SessionTTL,
 	)
 
 	registrationService := service.NewRegistrationService(

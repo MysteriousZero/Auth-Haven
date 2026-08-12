@@ -1,6 +1,6 @@
 # Configuration
 
-All configuration is read from environment variables by `internal/config`. Invalid integers, booleans, or durations silently fall back to defaults. Durations use Go syntax such as `15m`, `24h`, or `168h`.
+All configuration is read from environment variables by `internal/config`. Durations use Go syntax such as `15m`, `24h`, or `168h`. Invalid authentication durations fail startup; some legacy integer, boolean, and non-authentication duration settings still fall back to defaults.
 
 ## Database
 
@@ -32,15 +32,29 @@ The current server opens the database using `database/sql`, but does not apply t
 
 | Variable | Default | Meaning |
 |---|---:|---|
-| `JWT_PRIVATE_KEY` | empty | Base64/raw representation accepted by the token implementation; empty generates an ephemeral key |
+| `APP_ENV` | `development` | Runtime environment; `production` enables production safety checks |
+| `JWT_KEY_ID` | `development` | Identifier written to the JWT `kid` header for the active signing key |
+| `JWT_PRIVATE_KEY` | empty | Base64 encoding of a 64-byte Ed25519 private key; required in production |
+| `JWT_VERIFICATION_KEYS` | `{}` | JSON object mapping retained key IDs to base64 Ed25519 public keys |
 | `ACCESS_TOKEN_TTL` | `15m` | Access-token lifetime |
 | `REFRESH_TOKEN_TTL` | `168h` | Refresh-token lifetime |
 | `TEMP_TOKEN_TTL` | `10m` | Temporary MFA-token lifetime |
 | `SESSION_TTL` | `24h` | Session lifetime |
+| `TOKEN_CLOCK_SKEW` | `30s` | Non-negative JWT validation leeway for replica clock differences |
 
-Use a persistent signing key in production. An ephemeral key invalidates existing JWTs whenever the process restarts and is inconsistent across replicas.
+Production startup fails unless `JWT_PRIVATE_KEY` is present and valid. Local development may omit it; the process then creates one ephemeral key shared by its HTTP and gRPC servers. Never log these variables or commit their values.
 
-The current token service hard-codes token lifetimes rather than consuming these configured TTL values. Treat the table as the configuration surface intended by `internal/config`, and verify usage before relying on overrides.
+Generate a key pair, store the private key in a secret manager, and inject it at runtime. Every replica must receive the same active key configuration. The signing-key provider interface is the integration boundary for a KMS-backed implementation.
+
+## Signing-key rotation
+
+1. Generate a new Ed25519 key pair and a unique, immutable key ID.
+2. Add the new public key to `JWT_VERIFICATION_KEYS` everywhere while the old key remains active, then deploy and verify propagation.
+3. Add the old public key to `JWT_VERIFICATION_KEYS`, switch `JWT_KEY_ID` and `JWT_PRIVATE_KEY` to the new key, and deploy across all replicas.
+4. Keep the old public key for at least `ACCESS_TOKEN_TTL + TOKEN_CLOCK_SKEW`.
+5. Remove the old entry to revoke any remaining token signed by it.
+
+For emergency invalidation, remove the compromised key from `JWT_VERIFICATION_KEYS`, replace the active key if necessary, and deploy atomically. This invalidates its JWTs immediately. Revoke affected refresh tokens and sessions in PostgreSQL separately because they are opaque credentials rather than JWTs.
 
 ## Security
 

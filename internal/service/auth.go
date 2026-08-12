@@ -22,6 +22,8 @@ type authService struct {
 	tokenService  interfaces.TokenService
 	hasher        interfaces.Hasher
 	encryptionKey []byte
+	refreshTTL    time.Duration
+	sessionTTL    time.Duration
 }
 
 func NewAuthService(
@@ -33,6 +35,8 @@ func NewAuthService(
 	tokenService interfaces.TokenService,
 	hasher interfaces.Hasher,
 	encryptionKey []byte,
+	refreshTTL time.Duration,
+	sessionTTL time.Duration,
 ) interfaces.AuthService {
 	return &authService{
 		tenantRepo:    tenantRepo,
@@ -43,6 +47,8 @@ func NewAuthService(
 		tokenService:  tokenService,
 		hasher:        hasher,
 		encryptionKey: encryptionKey,
+		refreshTTL:    refreshTTL,
+		sessionTTL:    sessionTTL,
 	}
 }
 
@@ -58,8 +64,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return nil, errors.ErrTenantNotFound
 	}
@@ -73,8 +78,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return nil, errors.ErrTenantSuspended
 	}
@@ -90,8 +94,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return nil, errors.ErrInvalidCredentials
 	}
@@ -106,8 +109,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return nil, errors.ErrUserDisabled
 	}
@@ -123,8 +125,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return nil, errors.ErrInvalidCredentials
 	}
@@ -218,8 +219,7 @@ func (s *authService) VerifyMFA(ctx context.Context, tempToken, code string) (*m
 			IPAddress: utils.GetClientIP(ctx),
 			UserAgent: utils.GetUserAgent(ctx),
 
-		TraceID:   utils.GetTraceID(ctx),
-
+			TraceID: utils.GetTraceID(ctx),
 		})
 		return nil, errors.ErrInvalidMFACode
 	}
@@ -245,7 +245,7 @@ func (s *authService) completeLogin(ctx context.Context, user *models.User, tena
 	session := &models.Session{
 		SessionID: sessionID,
 		UserID:    user.UserID,
-		ExpiresAt: time.Now().UTC().Add(24 * time.Hour), // 24 hour session
+		ExpiresAt: time.Now().UTC().Add(s.sessionTTL),
 	}
 
 	err = s.authRepo.CreateSession(ctx, session)
@@ -264,7 +264,7 @@ func (s *authService) completeLogin(ctx context.Context, user *models.User, tena
 		TokenID:   uuid.New().String(),
 		UserID:    user.UserID,
 		TokenHash: s.hasher.HashToken(tokenPair.RefreshToken),
-		ExpiresAt: time.Now().UTC().Add(7 * 24 * time.Hour), // 7 days
+		ExpiresAt: time.Now().UTC().Add(s.refreshTTL),
 	}
 
 	err = s.authRepo.CreateRefreshToken(ctx, refreshToken)
@@ -281,8 +281,7 @@ func (s *authService) completeLogin(ctx context.Context, user *models.User, tena
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -327,8 +326,7 @@ func (s *authService) Logout(ctx context.Context, sessionID string) error {
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -361,8 +359,7 @@ func (s *authService) LogoutAll(ctx context.Context, userID string) error {
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -420,7 +417,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshTokenRaw string) 
 		TokenHash: s.hasher.HashToken(tokenPair.RefreshToken),
 		UserAgent: refreshToken.UserAgent,
 		IPAddress: refreshToken.IPAddress,
-		ExpiresAt: time.Now().UTC().Add(7 * 24 * time.Hour),
+		ExpiresAt: time.Now().UTC().Add(s.refreshTTL),
 	}
 
 	err = s.authRepo.CreateRefreshToken(ctx, newRefreshToken)
@@ -430,4 +427,3 @@ func (s *authService) RefreshToken(ctx context.Context, refreshTokenRaw string) 
 
 	return tokenPair, nil
 }
-

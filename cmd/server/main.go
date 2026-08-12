@@ -3,6 +3,7 @@ package main
 import (
 	"auth-haven/internal/config"
 	"auth-haven/internal/server"
+	"auth-haven/internal/service"
 	"database/sql"
 	"fmt"
 	"log"
@@ -39,16 +40,31 @@ func main() {
 		log.Fatalf("failed to ping DB: %v", err)
 	}
 
+	keyProvider, err := service.NewStaticSigningKeyProvider(
+		cfg.Auth.JWTKeyID,
+		cfg.Auth.JWTPrivateKey,
+		cfg.Auth.JWTVerificationKeys,
+	)
+	if err != nil {
+		log.Fatalf("failed to load signing keys: %v", err)
+	}
+	tokenService := service.NewTokenService(
+		keyProvider,
+		cfg.Auth.AccessTokenTTL,
+		cfg.Auth.TempTokenTTL,
+		cfg.Auth.TokenClockSkew,
+	)
+
 	// Start servers
 	go func() {
 		log.Printf("Starting HTTP server on %s", cfg.Server.HTTPPort)
-		if err := server.StartHTTP(cfg, conn); err != nil {
+		if err := server.StartHTTP(cfg, conn, tokenService); err != nil {
 			log.Fatalf("HTTP server failed: %v", err)
 		}
 	}()
 
 	log.Printf("Starting gRPC server on %s", cfg.Server.GRPCPort)
-	if err := server.StartGRPC(cfg, conn); err != nil {
+	if err := server.StartGRPC(cfg, conn, tokenService); err != nil {
 		log.Fatalf("gRPC server failed: %v", err)
 	}
 }
