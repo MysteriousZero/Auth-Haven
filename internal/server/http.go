@@ -95,7 +95,7 @@ func StartHTTP(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 		roleRepo, userRepo, tenantRepo, auditRepo,
 	)
 	auditService := service.NewAuditService(
-		auditRepo, userRepo, tenantRepo,
+		auditRepo, userRepo, tenantRepo, roleRepo,
 	)
 
 	// Handlers

@@ -12,17 +12,20 @@ type auditService struct {
 	auditRepo  interfaces.AuditRepository
 	userRepo   interfaces.UserRepository
 	tenantRepo interfaces.TenantRepository
+	roleRepo   interfaces.RoleRepository
 }
 
 func NewAuditService(
 	auditRepo interfaces.AuditRepository,
 	userRepo interfaces.UserRepository,
 	tenantRepo interfaces.TenantRepository,
+	roleRepo interfaces.RoleRepository,
 ) interfaces.AuditService {
 	return &auditService{
 		auditRepo:  auditRepo,
 		userRepo:   userRepo,
 		tenantRepo: tenantRepo,
+		roleRepo:   roleRepo,
 	}
 }
 
@@ -45,7 +48,9 @@ func (s *auditService) ListUserLogs(ctx context.Context, actorID, userID, cursor
 		if actor.TenantID != targetUser.TenantID {
 			return nil, "", errors.ErrForbidden
 		}
-		// TODO: Check if actor is admin or owner - for now assume they have permission
+		if err := s.requireAuditRead(ctx, actor); err != nil {
+			return nil, "", err
+		}
 	}
 
 	// Get audit logs
@@ -76,7 +81,9 @@ func (s *auditService) ListTenantLogs(ctx context.Context, actorID, tenantID, cu
 		return nil, "", errors.ErrForbidden
 	}
 
-	// TODO: Check if actor is admin or owner - for now assume they have permission
+	if err := s.requireAuditRead(ctx, actor); err != nil {
+		return nil, "", err
+	}
 
 	// Get audit logs
 	logs, nextCursor, err := s.auditRepo.ListTenantLogs(ctx, tenantID, cursor, limit)
@@ -85,4 +92,20 @@ func (s *auditService) ListTenantLogs(ctx context.Context, actorID, tenantID, cu
 	}
 
 	return logs, nextCursor, nil
+}
+
+func (s *auditService) requireAuditRead(ctx context.Context, actor *models.User) error {
+	if actor.RoleID == nil {
+		return errors.ErrForbidden
+	}
+	permissions, err := s.roleRepo.GetRolePermissions(ctx, *actor.RoleID)
+	if err != nil {
+		return errors.ErrForbidden
+	}
+	for _, permission := range permissions {
+		if permission.PermissionKey == "audit.read" {
+			return nil
+		}
+	}
+	return errors.ErrForbidden
 }

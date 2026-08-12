@@ -8,15 +8,15 @@ The checked-in tests concentrate on configuration, infrastructure connectivity, 
 |---|---|---|
 | Configuration | Environment loading, defaults, invalid-value fallback, PostgreSQL/Redis integration | No notable gap in the loader's current behavior |
 | Test infrastructure | PostgreSQL and Redis Testcontainers, connection validation, clean/idempotent migration bootstrap, and rejection of legacy migration states | Requires Docker locally and in CI |
-| Tenant repository | Tenant and invitation CRUD, personal/organization cases | Service-level tenant rules are not covered |
-| User repository | CRUD, status, role, password, last-login, duplicate email | Authorization rules are not covered |
-| Auth repository | Sessions and refresh-token lifecycle | Full login/token workflows are not covered |
+| Tenant repository | Tenant and invitation CRUD, personal/organization cases | Broader concurrent organization-registration cases remain |
+| User repository | CRUD, status, role, password, last-login, duplicate email | Additional administrative mutation branches remain |
+| Auth repository | Sessions and refresh-token lifecycle | Multi-device concurrency needs broader stress coverage |
 | Transactions | Commit and rollback | Complex multi-service failure paths remain untested |
 | Redis cache wrappers | Hits, misses, population, invalidation, refresh tokens, basic performance comparison | Failure/degraded-mode behavior needs broader coverage |
-| Services | Login, MFA challenge isolation, refresh rotation/replay, password-reset replay and invalidation, tenant/owner attack cases, token lifecycle, and delivery privacy/failure | Broader registration transactions, MFA activation, invitation delivery recovery, and audit authorization rules |
+| Services | Registration success/failure, login anti-enumeration, MFA lifecycle, refresh rotation/replay, password-reset replay/invalidation, invitation/role/audit authorization, and delivery privacy/failure | Broader transaction rollback, concurrency, SMS MFA, and delivery recovery branches |
 | HTTP/gRPC handlers | Login anti-enumeration, password-reset privacy, and refresh-token contract/status mapping | Remaining request validation, status mapping, and transport parity |
-| Middleware/security | JWT rejection and claim injection, CORS allowlist, Redis rate-limit outage policies, dependency readiness states, pool metrics, and SMTP header injection | gRPC interceptor rejection and broader attack cases |
-| End-to-end workflows | No dedicated tests found | Registration through login, refresh, MFA, and logout |
+| Middleware/security | HTTP and gRPC JWT rejection, claim injection, error redaction, CORS allowlist, Redis rate-limit outage policies, dependency readiness states, pool metrics, and SMTP header injection | Additional method-specific rate-limit boundaries |
+| End-to-end workflows | Stateful registration, password login, TOTP enrollment/activation, MFA login, refresh rotation/replay, and logout invalidation | Password-reset delivery remains covered as a focused service workflow rather than the primary authentication sequence |
 
 This summary is based on test files present in the repository, not a measured coverage percentage. Run coverage tooling before making a quantitative claim.
 
@@ -42,7 +42,7 @@ go test ./internal/... ./cmd/... -covermode=atomic -coverprofile=coverage.out
 go tool cover -func=coverage.out
 ```
 
-The issue #9 baseline measured on 2026-08-12 is 25.9% for `internal/service`, 37.9% for `internal/middleware`, 11.0% for `internal/handlers`, and 27.4% for `internal/server`. These are transparent starting measurements, not adequacy targets. CI publishes the function-level report in the Quality job summary so changes can be reviewed for unexplained regression.
+The issue #9 baseline measured on 2026-08-12 is 44.0% for `internal/service`, 37.9% for `internal/middleware`, 11.0% for `internal/handlers`, and 27.4% for `internal/server`. These are transparent starting measurements, not adequacy targets. CI publishes the function-level report in the Quality job summary so changes can be reviewed for unexplained regression.
 
 Coverage decisions prioritize named security scenarios over a repository-wide percentage: every credential type needs malformed, expired, revoked or consumed, and replay cases where applicable; every owner-scoped mutation needs a wrong-owner case; and every tenant-scoped operation needs a cross-tenant case. Raise package floors only after the relevant behavior is covered, so low-value lines cannot substitute for authentication and authorization assertions.
 
@@ -52,10 +52,10 @@ Migration tests apply files through `golang-migrate`, the same engine used by `c
 
 ## Production-readiness priorities
 
-1. Extend service-layer success and failure coverage to remaining registration, MFA activation, invitation, role, and audit branches.
+1. Extend service-layer coverage to transaction rollback, concurrent registration/refresh, SMS MFA, and delivery recovery branches.
 2. Exercise the remaining HTTP and gRPC contracts, including domain-error mapping and interceptor behavior.
 3. Expand tenant-isolation matrices as new scoped operations are wired.
-4. Add end-to-end registration, login, refresh, password reset, MFA, and logout scenarios.
+4. Add a transport-level workflow harness when HTTP server dependency construction can be injected without opening real listeners.
 5. Run the race detector and establish enforceable coverage thresholds in CI.
 
 ```bash

@@ -15,6 +15,10 @@ type tenantRepoStub struct {
 	interfaces.TenantRepository
 	getByID       func(context.Context, string) (*models.Tenant, error)
 	getInvitation func(context.Context, string) (*models.Invitation, error)
+	getInviteByID func(context.Context, string) (*models.Invitation, error)
+	updateInvite  func(context.Context, string, models.InvitationStatus) error
+	createTenant  func(context.Context, *models.Tenant) error
+	createInvite  func(context.Context, *models.Invitation) error
 }
 
 func (s tenantRepoStub) GetTenantByID(ctx context.Context, id string) (*models.Tenant, error) {
@@ -23,6 +27,22 @@ func (s tenantRepoStub) GetTenantByID(ctx context.Context, id string) (*models.T
 
 func (s tenantRepoStub) GetInvitationByHash(ctx context.Context, hash string) (*models.Invitation, error) {
 	return s.getInvitation(ctx, hash)
+}
+
+func (s tenantRepoStub) GetInvitationByID(ctx context.Context, id string) (*models.Invitation, error) {
+	return s.getInviteByID(ctx, id)
+}
+
+func (s tenantRepoStub) UpdateInvitationStatus(ctx context.Context, id string, status models.InvitationStatus) error {
+	return s.updateInvite(ctx, id, status)
+}
+
+func (s tenantRepoStub) CreateTenant(ctx context.Context, tenant *models.Tenant) error {
+	return s.createTenant(ctx, tenant)
+}
+
+func (s tenantRepoStub) CreateInvitation(ctx context.Context, invitation *models.Invitation) error {
+	return s.createInvite(ctx, invitation)
 }
 
 type userRepoStub struct {
@@ -123,11 +143,16 @@ func (s auditRepoStub) CreateAuditLog(_ context.Context, log *models.AuditLog) e
 	return nil
 }
 
+func (s auditRepoStub) ListUserLogs(context.Context, string, string, int) ([]models.AuditLog, string, error) {
+	return nil, "", nil
+}
+
 type tokenServiceStub struct {
 	interfaces.TokenService
 	pair      *models.TokenPair
 	pairErr   error
 	tempToken string
+	invite    string
 }
 
 func (s tokenServiceStub) GenerateTokenPair(string, string, *int64) (*models.TokenPair, error) {
@@ -135,6 +160,7 @@ func (s tokenServiceStub) GenerateTokenPair(string, string, *int64) (*models.Tok
 }
 
 func (s tokenServiceStub) GenerateTempToken(string) (string, error) { return s.tempToken, nil }
+func (s tokenServiceStub) GenerateInvitationToken() string          { return s.invite }
 
 type hasherStub struct {
 	interfaces.Hasher
@@ -148,6 +174,26 @@ type roleRepoStub struct {
 	interfaces.RoleRepository
 	getRole     func(context.Context, int64) (*models.Role, error)
 	permissions []models.RolePermission
+	createRole  func(context.Context, *models.Role) error
+}
+
+type domainCheckerStub struct {
+	interfaces.DomainChecker
+	public bool
+	domain string
+}
+
+func (s domainCheckerStub) IsPublicDomain(string) bool           { return s.public }
+func (s domainCheckerStub) ExtractDomain(string) (string, error) { return s.domain, nil }
+
+type emailProviderStub struct {
+	interfaces.EmailProvider
+	deliveredToken string
+}
+
+func (s *emailProviderStub) SendInvitationEmail(_ string, token string) error {
+	s.deliveredToken = token
+	return nil
 }
 
 func (s roleRepoStub) GetRoleByID(ctx context.Context, id int64) (*models.Role, error) {
@@ -156,6 +202,10 @@ func (s roleRepoStub) GetRoleByID(ctx context.Context, id int64) (*models.Role, 
 
 func (s roleRepoStub) GetRolePermissions(context.Context, int64) ([]models.RolePermission, error) {
 	return s.permissions, nil
+}
+
+func (s roleRepoStub) CreateRole(ctx context.Context, role *models.Role) error {
+	return s.createRole(ctx, role)
 }
 
 func TestAuthLoginCoversSuccessMFAAndAntiEnumeration(t *testing.T) {
@@ -332,15 +382,94 @@ func TestTenantAndOwnerIsolation(t *testing.T) {
 	t.Run("cross-tenant audit access is forbidden before query", func(t *testing.T) {
 		service := NewAuditService(auditRepoStub{}, userRepoStub{getByID: func(_ context.Context, id string) (*models.User, error) {
 			return &models.User{UserID: id, TenantID: map[string]string{"actor": "tenant-a", "target": "tenant-b"}[id]}, nil
-		}}, tenantRepoStub{})
+		}}, tenantRepoStub{}, roleRepoStub{})
 		_, _, err := service.ListUserLogs(context.Background(), "actor", "target", "", 20)
 		if !stderrors.Is(err, domainerrors.ErrForbidden) {
 			t.Fatalf("ListUserLogs() error = %v, want ErrForbidden", err)
 		}
 	})
+
+	t.Run("same-tenant audit access requires audit permission", func(t *testing.T) {
+		roleID := int64(9)
+		users := userRepoStub{getByID: func(_ context.Context, id string) (*models.User, error) {
+			return &models.User{UserID: id, TenantID: "tenant-a", RoleID: &roleID}, nil
+		}}
+		service := NewAuditService(auditRepoStub{}, users, tenantRepoStub{}, roleRepoStub{})
+		_, _, err := service.ListUserLogs(context.Background(), "actor", "target", "", 20)
+		if !stderrors.Is(err, domainerrors.ErrForbidden) {
+			t.Fatalf("ListUserLogs() error = %v, want ErrForbidden", err)
+		}
+
+		service = NewAuditService(auditRepoStub{}, users, tenantRepoStub{}, roleRepoStub{permissions: []models.RolePermission{{PermissionKey: "audit.read"}}})
+		if _, _, err := service.ListUserLogs(context.Background(), "actor", "target", "", 20); err != nil {
+			t.Fatalf("authorized ListUserLogs() error = %v", err)
+		}
+	})
 }
 
 func TestInvitationMFAAndRoleAttackCases(t *testing.T) {
+	t.Run("authorized invitation persists hash and delivers raw token", func(t *testing.T) {
+		roleID := int64(3)
+		var persisted *models.Invitation
+		email := &emailProviderStub{}
+		service := NewInvitationService(
+			tenantRepoStub{
+				getByID: func(context.Context, string) (*models.Tenant, error) {
+					return &models.Tenant{TenantID: "tenant-a", Type: models.TenantTypeOrganization}, nil
+				},
+				createInvite: func(_ context.Context, invitation *models.Invitation) error { persisted = invitation; return nil },
+			},
+			userRepoStub{
+				getByID: func(context.Context, string) (*models.User, error) {
+					return &models.User{TenantID: "tenant-a", RoleID: &roleID}, nil
+				},
+				getByEmail: func(context.Context, string, string) (*models.User, error) { return nil, domainerrors.ErrUserNotFound },
+			},
+			roleRepoStub{
+				getRole: func(context.Context, int64) (*models.Role, error) {
+					return &models.Role{RoleID: roleID, TenantID: "tenant-a"}, nil
+				},
+				permissions: []models.RolePermission{{PermissionKey: "users.write"}},
+			},
+			auditRepoStub{}, email, tokenServiceStub{invite: "raw-invitation"}, hasherStub{},
+		)
+		invitation, err := service.SendInvitation(context.Background(), "actor", "tenant-a", "invitee@example.com", roleID)
+		if err != nil || invitation == nil || persisted == nil {
+			t.Fatalf("SendInvitation() = %#v, %v; persisted=%#v", invitation, err, persisted)
+		}
+		if persisted.TokenHash != "hash:raw-invitation" || email.deliveredToken != "raw-invitation" {
+			t.Fatalf("hash=%q delivered=%q", persisted.TokenHash, email.deliveredToken)
+		}
+	})
+
+	t.Run("owner creates tenant-bound role", func(t *testing.T) {
+		ownerRoleID := int64(1)
+		created := false
+		service := NewRoleService(
+			roleRepoStub{
+				getRole: func(context.Context, int64) (*models.Role, error) {
+					return &models.Role{RoleID: ownerRoleID, TenantID: "tenant-a", Name: "Owner"}, nil
+				},
+				createRole: func(_ context.Context, role *models.Role) error {
+					created = role.TenantID == "tenant-a" && role.Name == "Auditor"
+					role.RoleID = 8
+					return nil
+				},
+			},
+			userRepoStub{getByID: func(context.Context, string) (*models.User, error) {
+				return &models.User{TenantID: "tenant-a", RoleID: &ownerRoleID}, nil
+			}},
+			tenantRepoStub{getByID: func(context.Context, string) (*models.Tenant, error) {
+				return &models.Tenant{Type: models.TenantTypeOrganization}, nil
+			}},
+			auditRepoStub{},
+		)
+		role, err := service.CreateRole(context.Background(), "owner", "tenant-a", "Auditor")
+		if err != nil || role.RoleID != 8 || !created {
+			t.Fatalf("CreateRole() = %#v, %v; created=%v", role, err, created)
+		}
+	})
+
 	t.Run("accepted and expired invitations cannot be replayed", func(t *testing.T) {
 		for name, invitation := range map[string]*models.Invitation{
 			"accepted": {Status: models.InvitationStatusAccepted, ExpiresAt: time.Now().Add(time.Hour)},
@@ -393,6 +522,69 @@ func TestInvitationMFAAndRoleAttackCases(t *testing.T) {
 		err := service.DeleteRole(context.Background(), actor.UserID, roleID)
 		if !stderrors.Is(err, domainerrors.ErrRoleNotFound) || deleted {
 			t.Fatalf("DeleteRole() error = %v, deleted = %v", err, deleted)
+		}
+	})
+
+	t.Run("invitation mutation rejects cross-tenant actor", func(t *testing.T) {
+		invitation := &models.Invitation{InvitationID: "invite-a", TenantID: "tenant-a", Status: models.InvitationStatusPending}
+		updated := false
+		service := NewInvitationService(
+			tenantRepoStub{
+				getInviteByID: func(context.Context, string) (*models.Invitation, error) { return invitation, nil },
+				updateInvite:  func(context.Context, string, models.InvitationStatus) error { updated = true; return nil },
+			},
+			userRepoStub{getByID: func(context.Context, string) (*models.User, error) { return &models.User{TenantID: "tenant-b"}, nil }},
+			roleRepoStub{}, auditRepoStub{}, nil, nil, nil,
+		)
+		if err := service.RevokeInvitation(context.Background(), "attacker", invitation.InvitationID); !stderrors.Is(err, domainerrors.ErrForbidden) || updated {
+			t.Fatalf("RevokeInvitation() error = %v, updated = %v", err, updated)
+		}
+		if err := service.ResendInvitation(context.Background(), "attacker", invitation.InvitationID); !stderrors.Is(err, domainerrors.ErrForbidden) || updated {
+			t.Fatalf("ResendInvitation() error = %v, updated = %v", err, updated)
+		}
+	})
+
+	t.Run("consumed invitation cannot be revoked or resent", func(t *testing.T) {
+		roleID := int64(3)
+		invitation := &models.Invitation{InvitationID: "invite-a", TenantID: "tenant-a", Status: models.InvitationStatusAccepted}
+		service := NewInvitationService(
+			tenantRepoStub{getInviteByID: func(context.Context, string) (*models.Invitation, error) { return invitation, nil }},
+			userRepoStub{getByID: func(context.Context, string) (*models.User, error) {
+				return &models.User{TenantID: "tenant-a", RoleID: &roleID}, nil
+			}},
+			roleRepoStub{permissions: []models.RolePermission{{PermissionKey: "users.write"}}}, auditRepoStub{}, nil, nil, nil,
+		)
+		if err := service.RevokeInvitation(context.Background(), "actor", invitation.InvitationID); !stderrors.Is(err, domainerrors.ErrInvitationExpiredOrUsed) {
+			t.Fatalf("RevokeInvitation() error = %v", err)
+		}
+		if err := service.ResendInvitation(context.Background(), "actor", invitation.InvitationID); !stderrors.Is(err, domainerrors.ErrInvitationExpiredOrUsed) {
+			t.Fatalf("ResendInvitation() error = %v", err)
+		}
+	})
+}
+
+func TestRegistrationFailurePathsStopBeforeUserCreation(t *testing.T) {
+	t.Run("public domain organization", func(t *testing.T) {
+		created := false
+		service := NewRegistrationService(tenantRepoStub{}, userRepoStub{createUser: func(context.Context, *models.User) error {
+			created = true
+			return nil
+		}}, nil, hasherStub{}, auditRepoStub{}, domainCheckerStub{public: true, domain: "gmail.com"})
+		_, err := service.RegisterOrgUser(context.Background(), "person@gmail.com", "password", "Person")
+		if !stderrors.Is(err, domainerrors.ErrPublicDomainNotAllowed) || created {
+			t.Fatalf("RegisterOrgUser() error = %v, created = %v", err, created)
+		}
+	})
+
+	t.Run("tenant persistence failure", func(t *testing.T) {
+		created := false
+		service := NewRegistrationService(
+			tenantRepoStub{createTenant: func(context.Context, *models.Tenant) error { return stderrors.New("write failed") }},
+			userRepoStub{createUser: func(context.Context, *models.User) error { created = true; return nil }},
+			nil, hasherStub{}, auditRepoStub{}, nil,
+		)
+		if _, err := service.RegisterIndividual(context.Background(), "person@example.com", "password", "Person"); err == nil || created {
+			t.Fatalf("RegisterIndividual() error = %v, created = %v", err, created)
 		}
 	})
 }
