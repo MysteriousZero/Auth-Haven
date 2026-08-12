@@ -52,7 +52,8 @@ func (e *emailProvider) send(to, subject, body string) error {
 	if e.username != "" {
 		auth = smtp.PlainAuth("", e.username, e.password, e.smtpHost)
 	}
-	message := []byte("From: " + sender.String() + "\r\nTo: " + recipient.String() + "\r\nSubject: " + subject + "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body)
+	// Keep the untrusted envelope recipient out of message headers entirely.
+	message := []byte("From: " + sender.String() + "\r\nTo: undisclosed-recipients:;\r\nSubject: " + subject + "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body)
 	if err := smtp.SendMail(fmt.Sprintf("%s:%d", e.smtpHost, e.smtpPort), auth, sender.Address, []string{recipient.Address}, message); err != nil {
 		return fmt.Errorf("send email: %w", err)
 	}
