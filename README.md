@@ -76,4 +76,5 @@ Integration tests require a working Docker daemon. Changes to behavior should up
 
 ## License
 
-No license file is currently present. Unless a license is added, normal copyright restrictions apply.
+Auth Haven is licensed under the [Apache License 2.0](LICENSE). Participation
+in the project is governed by the [Code of Conduct](CODE_OF_CONDUCT.md).
