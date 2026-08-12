@@ -132,7 +132,7 @@ currently required.
 
 Use the repository pull request template and complete every applicable section:
 
-- Summary and linked work
+- Summary
 - Behavior and compatibility
 - Security and privacy impact
 - Exact verification performed
@@ -145,11 +145,14 @@ Every pull request must also have suitable GitHub metadata:
 - At least one appropriate default repository label
 - An accountable assignee
 - A version milestone
+- Related issues linked through GitHub's Development section
 - Membership in the Auth Haven Roadmap
 - Roadmap Status, Area, Risk, and Phase
 
-Native Issue Priority applies to issues, not pull requests. Link an issue with
-`Closes #123` only when merging the pull request will fully resolve it.
+Native Issue Priority applies to issues, not pull requests. Use GitHub's
+Development section for issue relationships instead of duplicating them in the
+pull request body. Mark a relationship as closing only when merging the pull
+request will fully resolve the issue.
 
 ## Review expectations
 
