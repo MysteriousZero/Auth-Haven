@@ -1,5 +1,9 @@
 # Contributing
 
+By participating, you agree to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md). Contributions are submitted under the
+project's [Apache License 2.0](LICENSE).
+
 Thank you for improving Auth Haven. Authentication changes can have broad security consequences, so contributions should be small, explicit, and supported by tests.
 
 ## Before starting

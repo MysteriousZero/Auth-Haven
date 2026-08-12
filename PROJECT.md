@@ -63,6 +63,6 @@ When these disagree, treat the disagreement as drift to resolve—not as permiss
 3. Add service-layer and transport tests for critical authentication paths.
 4. Close security configuration gaps: CORS, key handling, TTL usage, and email delivery.
 5. Add CI checks for formatting, vetting, tests, generated-code drift, and migration validation.
-6. Define release versioning, compatibility guarantees, and a license.
+6. Define release versioning, compatibility guarantees, and support policy.
 
 This roadmap describes priorities, not release commitments.

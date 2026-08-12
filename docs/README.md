@@ -21,6 +21,8 @@ Repository-level governance and contributor documents:
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md) — contribution workflow and review expectations
 - [`SECURITY.md`](../SECURITY.md) — vulnerability reporting and secure-development rules
 - [`SUPPORT.md`](../SUPPORT.md) — support channels and useful bug reports
+- [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md) — community standards and enforcement
+- [`LICENSE`](../LICENSE) — Apache License 2.0 terms
 - [`AGENTS.md`](../AGENTS.md) — mandatory repository-wide instructions for coding agents
 
 The `docs/` directory is the single documentation source. It describes current behavior and explicitly labels planned requirements or known gaps. Executable code and migrations remain authoritative when documentation drifts.
