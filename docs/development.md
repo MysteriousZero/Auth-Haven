@@ -1,34 +1,10 @@
 # Development guide
 
-Human contributors should also read [`CONTRIBUTING.md`](../CONTRIBUTING.md). Coding agents must follow [`AGENTS.md`](../AGENTS.md) and the [AI-assisted development guide](ai-development.md).
-
-## Typical workflow
-
-1. Update the relevant architecture or contract under `docs/` when behavior changes.
-2. Implement domain models/interfaces, repositories, services, then transport adapters.
-3. Add tests at the affected layers.
-4. Regenerate protobuf code if a `.proto` contract changed.
-5. Run formatting and the test suite.
-
-## Commands
-
-```bash
-gofmt -w path/to/changed.go
-go test ./...
-go vet ./...
-```
-
-Many integration tests use Testcontainers and require a working Docker daemon. They may download PostgreSQL or Redis images on the first run.
-
-To run narrower suites:
-
-```bash
-go test ./test/...
-go test ./test/repositories/...
-go test ./test/repositories/cache/...
-```
-
-See the [testing guide](testing.md) for the repository's coverage assessment and known gaps.
+Use [`CONTRIBUTING.md`](../CONTRIBUTING.md) for setup, implementation order,
+validation, commits, pull requests, and review requirements. Coding agents must
+also follow [`AGENTS.md`](../AGENTS.md) and the
+[AI-assisted development guide](ai-development.md). Test commands and current
+coverage are maintained in the [testing guide](testing.md).
 
 ## Generate protobuf code
 
@@ -47,7 +23,7 @@ protoc \
 
 Confirm generated package paths and compile the repository after regeneration. `InviationService.proto` is currently misspelled and is not registered by the server.
 
-## Adding an HTTP feature
+## HTTP changes
 
 - Define transport-independent data in `internal/domain/models` and behavior in `internal/domain/interfaces`.
 - Put business rules in `internal/service`, not handlers.
@@ -56,7 +32,7 @@ Confirm generated package paths and compile the repository after regeneration. `
 - Wire dependencies and routes in `internal/server/http.go`.
 - Map new domain errors centrally in `internal/domain/errors`.
 
-## Adding a gRPC feature
+## gRPC changes
 
 - Update the protobuf contract and regenerate code.
 - Implement the generated server method in `internal/handlers/grpc.go`.

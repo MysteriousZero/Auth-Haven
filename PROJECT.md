@@ -56,13 +56,10 @@ When these disagree, treat the disagreement as drift to resolve—not as permiss
 - The migration directory contains potentially overlapping initial/schema migrations and needs consolidation before a clean deployment workflow can be guaranteed.
 - Automated tests do not yet adequately cover services, transports, middleware, security, or end-to-end workflows.
 
-## Near-term roadmap
+## Roadmap
 
-1. Establish one reliable migration lineage and a repeatable local stack.
-2. Complete and align the gRPC contract and handler implementations.
-3. Add service-layer and transport tests for critical authentication paths.
-4. Close security configuration gaps: CORS, key handling, TTL usage, and email delivery.
-5. Add CI checks for formatting, vetting, tests, generated-code drift, and migration validation.
-6. Define release versioning, compatibility guarantees, and support policy.
-
-This roadmap describes priorities, not release commitments.
+Use the [Auth Haven Roadmap](https://github.com/orgs/MysteriousZero/projects/2)
+for current priorities and the
+[release milestones](https://github.com/MysteriousZero/auth-haven/milestones)
+for planned version scope. Roadmap entries are planning targets, not release
+commitments.
