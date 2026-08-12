@@ -6,18 +6,14 @@ option go_package = "auth-haven/pkg/proto";
 import public "common/Tokens.proto";
 
 service InviteService{
-  rpc InviteEmployee(InviteEmployeeRequest) returns (InviteToken);
-  rpc AcceptInvite(AcceptInviteRequest) returns (Tokens);
+  rpc InviteEmployee(InviteEmployeeRequest) returns (common.InviteToken);
+  rpc AcceptInvite(AcceptInviteRequest) returns (common.Tokens);
 }
 
 message InviteEmployeeRequest {
   string tenant_id = 1;
   string email = 2;
   int32 role_id = 5; // maps to roles table
-}
-
-message InviteToken {
-  string invitation_token = 1;
 }
 
 message AcceptInviteRequest {

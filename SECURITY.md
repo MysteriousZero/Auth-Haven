@@ -29,6 +29,7 @@ There is currently no guaranteed response or remediation timeline. The maintaine
 - Never commit secrets or real identity data.
 - Treat `.env`, signing keys, MFA keys, database credentials, reset tokens, invitation tokens, and refresh tokens as sensitive.
 - Preserve anti-enumeration behavior in authentication and password recovery.
+- Do not suppress CodeQL, dependency-review, or secret-scanning findings without the evidence, owner, and review date required by the [CI policy](docs/ci.md#security-triage-and-suppression).
 - Enforce tenant scope in services and repositories; never trust a path parameter alone for authorization.
 - Use cryptographically secure randomness and established libraries rather than custom cryptography.
 - Store opaque credentials as hashes and encrypt recoverable MFA secrets at rest.

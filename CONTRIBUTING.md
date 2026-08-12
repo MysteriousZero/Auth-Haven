@@ -90,6 +90,8 @@ go test -race ./...
 
 Integration tests require Docker. Also validate the affected contract:
 
+The required CI gates, expected runtimes, protobuf tool versions, failure handling, and flaky-test policy are documented in the [CI guide](docs/ci.md).
+
 | Change | Required evidence |
 |---|---|
 | Go behavior | Focused tests plus `go test ./...` |

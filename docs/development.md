@@ -5,20 +5,14 @@ validation, commits, pull requests, and review requirements. Coding agents must
 also follow [`AGENTS.md`](../AGENTS.md) and the
 [AI-assisted development guide](ai-development.md). Test commands and current
 coverage are maintained in the [testing guide](testing.md).
+Required automation and troubleshooting are maintained in the [CI guide](ci.md).
 
 ## Generate protobuf code
 
-Run from the repository root:
+Run the pinned repository script from the repository root:
 
 ```bash
-protoc \
-  --go_out=pkg/proto --go_opt=paths=source_relative \
-  --go-grpc_out=pkg/proto --go-grpc_opt=paths=source_relative \
-  -I api/proto \
-  api/proto/AuthService.proto \
-  api/proto/UserService.proto \
-  api/proto/SessionService.proto \
-  api/proto/common/Tokens.proto
+./scripts/generate-proto.sh
 ```
 
 Confirm generated package paths and compile the repository after regeneration. `InviationService.proto` is currently misspelled and is not registered by the server.
