@@ -12,7 +12,7 @@ type Role struct {
 }
 
 type RolePermission struct {
-	RoleID         int64  `json:"role_id" db:"role_id"`
+	RoleID        int64  `json:"role_id" db:"role_id"`
 	PermissionKey string `json:"permission_key" db:"permission_key"`
 }
 
@@ -22,6 +22,6 @@ type CreateRoleRequest struct {
 }
 
 type UpdateRoleRequest struct {
-	Name            *string   `json:"name,omitempty"`
-	PermissionKeys  []string  `json:"permission_keys,omitempty"`
+	Name           *string  `json:"name,omitempty"`
+	PermissionKeys []string `json:"permission_keys,omitempty"`
 }

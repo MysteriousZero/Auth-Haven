@@ -5,11 +5,11 @@ import (
 )
 
 type LoginResult struct {
-	MFARequired   bool   `json:"mfa_required"`
-	TempToken     string `json:"temp_token,omitempty"`
-	AccessToken   string `json:"access_token,omitempty"`
-	RefreshToken  string `json:"refresh_token,omitempty"`
-	SessionID     string `json:"session_id,omitempty"`
+	MFARequired  bool   `json:"mfa_required"`
+	TempToken    string `json:"temp_token,omitempty"`
+	AccessToken  string `json:"access_token,omitempty"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+	SessionID    string `json:"session_id,omitempty"`
 }
 
 type TokenPair struct {
@@ -59,8 +59,8 @@ type RegisterOrgUserRequest struct {
 
 type RegisterWithInvitationRequest struct {
 	InvitationToken string `json:"invitation_token" validate:"required,min=32"`
-	Password       string `json:"password" validate:"required,min=12,max=128,complexpassword"`
-	FullName       string `json:"full_name" validate:"required,min=1,max=255"`
+	Password        string `json:"password" validate:"required,min=12,max=128,complexpassword"`
+	FullName        string `json:"full_name" validate:"required,min=1,max=255"`
 }
 
 type RequestPasswordResetRequest struct {
@@ -75,5 +75,5 @@ type ResetPasswordRequest struct {
 
 type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password" validate:"required"`
-	NewPassword    string `json:"new_password" validate:"required,min=12,max=128,complexpassword"`
+	NewPassword     string `json:"new_password" validate:"required,min=12,max=128,complexpassword"`
 }

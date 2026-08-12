@@ -10,23 +10,23 @@ import (
 // ValidationMiddleware creates a middleware that validates request bodies
 func ValidationMiddleware() gin.HandlerFunc {
 	validator := validation.NewCustomValidator()
-	
+
 	return func(c *gin.Context) {
 		// Skip validation for GET, DELETE, OPTIONS requests
 		if c.Request.Method == "GET" || c.Request.Method == "DELETE" || c.Request.Method == "OPTIONS" {
 			c.Next()
 			return
 		}
-		
+
 		// Get the content type
 		contentType := c.GetHeader("Content-Type")
-		
+
 		// Only validate JSON requests
 		if contentType != "application/json" {
 			c.Next()
 			return
 		}
-		
+
 		// Store validator in context for handlers to use
 		c.Set("validator", validator)
 		c.Next()
@@ -40,7 +40,7 @@ func ValidateStruct(c *gin.Context, s interface{}) error {
 			return v.ValidateStruct(s)
 		}
 	}
-	
+
 	// Fallback to default validation
 	return validation.NewCustomValidator().ValidateStruct(s)
 }
@@ -52,7 +52,7 @@ func ValidateField(c *gin.Context, field interface{}, tag string) error {
 			return v.ValidateVar(field, tag)
 		}
 	}
-	
+
 	// Fallback to default validation
 	return validation.NewCustomValidator().ValidateVar(field, tag)
 }

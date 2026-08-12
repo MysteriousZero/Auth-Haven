@@ -82,8 +82,7 @@ func (s *roleService) CreateRole(ctx context.Context, actorID, tenantID, name st
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 	if err := s.auditRepo.CreateAuditLog(ctx, auditLog); err != nil {
 		fmt.Printf("Failed to create audit log: %v\n", err)
@@ -147,8 +146,7 @@ func (s *roleService) DeleteRole(ctx context.Context, actorID string, roleID int
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 	if err := s.auditRepo.CreateAuditLog(ctx, auditLog); err != nil {
 		fmt.Printf("Failed to create audit log: %v\n", err)
@@ -223,8 +221,7 @@ func (s *roleService) SetRolePermissions(ctx context.Context, actorID string, ro
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 	if err := s.auditRepo.CreateAuditLog(ctx, auditLog); err != nil {
 		fmt.Printf("Failed to create audit log: %v\n", err)
@@ -247,4 +244,3 @@ func (s *roleService) requireOwner(ctx context.Context, actor *models.User) erro
 	}
 	return nil
 }
-

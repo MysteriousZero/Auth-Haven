@@ -41,4 +41,3 @@ func (g *totpGenerator) GenerateQRCodeURL(secret, email string) string {
 	}
 	return key.URL()
 }
-

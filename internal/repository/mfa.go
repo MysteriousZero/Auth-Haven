@@ -23,9 +23,9 @@ func (r *mfaMethodRepository) CreateMFAMethod(ctx context.Context, method *model
 		INSERT INTO user_mfa_methods (mfa_id, user_id, type, secret, phone_number, enabled, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	
+
 	method.CreatedAt = time.Now().UTC()
-	
+
 	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		method.MFAID,
 		method.UserID,
@@ -35,11 +35,11 @@ func (r *mfaMethodRepository) CreateMFAMethod(ctx context.Context, method *model
 		method.Enabled,
 		method.CreatedAt,
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to create MFA method: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -50,13 +50,13 @@ func (r *mfaMethodRepository) ListMFAMethods(ctx context.Context, userID string)
 		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`
-	
+
 	rows, err := getDB(ctx, r.db).QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list MFA methods: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var methods []models.UserMFAMethod
 	for rows.Next() {
 		var method models.UserMFAMethod
@@ -74,27 +74,27 @@ func (r *mfaMethodRepository) ListMFAMethods(ctx context.Context, userID string)
 		}
 		methods = append(methods, method)
 	}
-	
+
 	return methods, nil
 }
 
 func (r *mfaMethodRepository) UpdateMFAMethod(ctx context.Context, mfaID string, enabled bool) error {
 	query := `UPDATE user_mfa_methods SET enabled = $2 WHERE mfa_id = $1`
-	
+
 	result, err := getDB(ctx, r.db).ExecContext(ctx, query, mfaID, enabled)
 	if err != nil {
 		return fmt.Errorf("failed to update MFA method: %w", err)
 	}
-	
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
-	
+
 	if rowsAffected == 0 {
 		return errors.ErrMFAMethodNotFound
 	}
-	
+
 	return nil
 }
 
@@ -131,9 +131,9 @@ func (r *passwordResetRepository) CreatePasswordReset(ctx context.Context, reset
 		INSERT INTO password_resets (reset_id, user_id, token_hash, status, expires_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
-	
+
 	reset.CreatedAt = time.Now().UTC()
-	
+
 	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		reset.ResetID,
 		reset.UserID,
@@ -142,11 +142,11 @@ func (r *passwordResetRepository) CreatePasswordReset(ctx context.Context, reset
 		reset.ExpiresAt,
 		reset.CreatedAt,
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to create password reset: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -156,7 +156,7 @@ func (r *passwordResetRepository) GetPasswordResetByHash(ctx context.Context, to
 		FROM password_resets
 		WHERE token_hash = $1
 	`
-	
+
 	var reset models.PasswordReset
 	err := getDB(ctx, r.db).QueryRowContext(ctx, query, tokenHash).Scan(
 		&reset.ResetID,
@@ -166,34 +166,34 @@ func (r *passwordResetRepository) GetPasswordResetByHash(ctx context.Context, to
 		&reset.ExpiresAt,
 		&reset.CreatedAt,
 	)
-	
+
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.ErrInvalidToken
 		}
 		return nil, fmt.Errorf("failed to get password reset: %w", err)
 	}
-	
+
 	return &reset, nil
 }
 
 func (r *passwordResetRepository) UpdatePasswordResetStatus(ctx context.Context, resetID string, status models.PasswordResetStatus) error {
 	query := `UPDATE password_resets SET status = $2 WHERE reset_id = $1`
-	
+
 	result, err := getDB(ctx, r.db).ExecContext(ctx, query, resetID, status)
 	if err != nil {
 		return fmt.Errorf("failed to update password reset status: %w", err)
 	}
-	
+
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
-	
+
 	if rowsAffected == 0 {
 		return errors.ErrInvalidToken
 	}
-	
+
 	return nil
 }
 
@@ -210,15 +210,15 @@ func (r *auditRepository) CreateAuditLog(ctx context.Context, log *models.AuditL
 		INSERT INTO audit_logs (log_id, user_id, tenant_id, action, target_id, metadata, ip_address, user_agent, trace_id, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 	`
-	
+
 	log.CreatedAt = time.Now().UTC()
-	
+
 	// Convert metadata to JSONB
 	var metadata interface{} = nil
 	if log.Metadata != nil {
 		metadata = log.Metadata
 	}
-	
+
 	_, err := getDB(ctx, r.db).ExecContext(ctx, query,
 		log.LogID,
 		log.UserID,
@@ -231,7 +231,7 @@ func (r *auditRepository) CreateAuditLog(ctx context.Context, log *models.AuditL
 		log.TraceID,
 		log.CreatedAt,
 	)
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to create audit log: %w", err)
 	}
@@ -266,10 +266,10 @@ func (r *auditRepository) ListTenantLogs(ctx context.Context, tenantID string, c
 		return nil, "", fmt.Errorf("failed to list tenant logs: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var logs []models.AuditLog
 	var lastCreatedAt time.Time
-	
+
 	for rows.Next() {
 		var log models.AuditLog
 		err := rows.Scan(
@@ -290,12 +290,12 @@ func (r *auditRepository) ListTenantLogs(ctx context.Context, tenantID string, c
 		logs = append(logs, log)
 		lastCreatedAt = log.CreatedAt
 	}
-	
+
 	var nextCursor string
 	if len(logs) == limit {
 		nextCursor = lastCreatedAt.Format(time.RFC3339Nano)
 	}
-	
+
 	return logs, nextCursor, nil
 }
 
@@ -327,10 +327,10 @@ func (r *auditRepository) ListUserLogs(ctx context.Context, userID string, curso
 		return nil, "", fmt.Errorf("failed to list user logs: %w", err)
 	}
 	defer rows.Close()
-	
+
 	var logs []models.AuditLog
 	var lastCreatedAt time.Time
-	
+
 	for rows.Next() {
 		var log models.AuditLog
 		err := rows.Scan(
@@ -350,11 +350,11 @@ func (r *auditRepository) ListUserLogs(ctx context.Context, userID string, curso
 		logs = append(logs, log)
 		lastCreatedAt = log.CreatedAt
 	}
-	
+
 	var nextCursor string
 	if len(logs) == limit {
 		nextCursor = lastCreatedAt.Format(time.RFC3339Nano)
 	}
-	
+
 	return logs, nextCursor, nil
 }

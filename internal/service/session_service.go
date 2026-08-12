@@ -71,8 +71,7 @@ func (s *sessionService) RevokeSession(ctx context.Context, actorID, sessionID s
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -142,8 +141,7 @@ func (s *sessionService) RemoveDevice(ctx context.Context, actorID, deviceID str
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -153,4 +151,3 @@ func (s *sessionService) RemoveDevice(ctx context.Context, actorID, deviceID str
 
 	return nil
 }
-
