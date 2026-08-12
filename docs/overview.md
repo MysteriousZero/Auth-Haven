@@ -4,8 +4,6 @@
 
 Auth Haven is an identity service designed around tenant isolation. A user belongs to a tenant and may have a role. The service manages registration, authentication, MFA, passwords, sessions, devices, invitations, and audit records.
 
-The repository uses documentation-driven development: `docs/` records current behavior, architecture, constraints, and explicitly marked plans, while Go packages under `internal/` contain the implementation. Executable wiring remains authoritative when documentation drifts.
-
 ## Implemented HTTP capabilities
 
 - Individual, organization-domain, and invitation-based registration

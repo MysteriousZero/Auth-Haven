@@ -1,7 +1,5 @@
 # Auth Haven documentation
 
-Auth Haven is a documentation-driven, multi-tenant authentication and authorization service written in Go. It exposes HTTP/JSON and gRPC transports over shared domain services and persists identity data in PostgreSQL. Redis supports HTTP rate limiting and selected repository caches.
-
 ## Documentation map
 
 - [Project overview](overview.md) — purpose, capabilities, technology, and implementation status
@@ -25,16 +23,6 @@ Repository-level governance and contributor documents:
 - [`LICENSE`](../LICENSE) — Apache License 2.0 terms
 - [`AGENTS.md`](../AGENTS.md) — mandatory repository-wide instructions for coding agents
 
-The `docs/` directory is the single documentation source. It describes current behavior and explicitly labels planned requirements or known gaps. Executable code and migrations remain authoritative when documentation drifts.
-
-## At a glance
-
-```text
-HTTP client ──> Gin middleware ──> handlers ──> services ──> repositories ──> PostgreSQL
-                    │                                          │
-                    └── JWT auth and Redis rate limits          └── Redis cache
-
-gRPC client ──> interceptors ──> gRPC handler ──> shared services/repositories
-```
-
-Default listeners are HTTP `:8080` and gRPC `:50051`.
+These documents describe current behavior and explicitly label plans or known
+gaps. Executable code, migrations, and generated contracts are authoritative
+when documentation drifts.
