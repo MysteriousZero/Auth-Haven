@@ -2,10 +2,6 @@
 
 <!-- What changed, and why? -->
 
-## Linked work
-
-<!-- Use "Closes #123" when this PR completes an issue. Otherwise explain why no issue is linked. -->
-
 ## Behavior and compatibility
 
 <!-- Note API, protobuf, schema, configuration, or backwards-compatibility changes. -->
@@ -44,6 +40,7 @@
 - [ ] At least one suitable default label is applied
 - [ ] An accountable assignee is set
 - [ ] A release milestone is selected
+- [ ] Related issues are linked through GitHub's Development section
 - [ ] The PR is added to Auth Haven Roadmap
 - [ ] Roadmap Status, Area, Risk, and Phase are set
 
