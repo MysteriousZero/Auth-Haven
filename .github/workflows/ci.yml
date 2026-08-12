@@ -31,7 +31,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - name: Check formatting
-        run: test -z "$(gofmt -l $(git ls-files '*.go'))"
+        run: test -z "$(gofmt -l .)"
       - name: Vet
         run: go vet ./...
       - name: Run non-container tests
