@@ -46,11 +46,11 @@ When these disagree, treat the disagreement as drift to resolve—not as permiss
 
 ## Known gaps
 
-- Several declared gRPC AuthService methods fall through to `Unimplemented`; the refresh handler method is incorrectly named `Refresh` instead of `RefreshToken`.
+- Several declared gRPC AuthService methods still fall through to `Unimplemented`; token refresh is implemented.
 - The gRPC validation interceptor is a pass-through.
 - Role services are not wired to HTTP routes.
 - Token TTL configuration is not consistently consumed by token-generation code.
-- Automated tests do not yet adequately cover services, transports, middleware, security, or end-to-end workflows.
+- Critical authentication and tenant-isolation paths have regression coverage; broader transaction, concurrency, transport-parity, and SMS MFA branches remain.
 
 ## Roadmap
 
