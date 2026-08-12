@@ -1,10 +1,12 @@
 {
   "name": "Go Dev Container",
-  "dockerComposeFile": "docker-compose.yaml",
+  "dockerComposeFile": ["../docker-compose.yaml", "docker-compose.yaml"],
   "service": "auth-haven-dev",
   "workspaceFolder": "/workspace",
   "remoteUser": "devuser",
-  "postCreateCommand": "go mod tidy",
+  "initializeCommand": "./scripts/dev-env.sh",
+  "runServices": ["db", "redis", "migrate", "auth-haven-dev"],
+  "postCreateCommand": "go mod download",
   "customizations": {
     "vscode": {
       "extensions": [

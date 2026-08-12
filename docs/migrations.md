@@ -1,6 +1,6 @@
 # Migration operations
 
-`migrations/000001_init_schema.up.sql` is the only schema migration. It creates the complete schema represented by the ERD plus the `password_resets.updated_at` and `audit_logs.trace_id` fields consumed by current models and repositories. Application startup does not run migrations; operators run `go run ./cmd/migrate` separately.
+`migrations/000001_init_schema.up.sql` is the only schema migration. It creates the complete schema represented by the ERD plus the `password_resets.updated_at` and `audit_logs.trace_id` fields consumed by current models and repositories. Application startup does not run migrations. Operators run `go run ./cmd/migrate` separately; the development Compose stack models this explicitly with a one-shot `migrate` service that must succeed before `app` starts.
 
 ## Supported upgrades
 
