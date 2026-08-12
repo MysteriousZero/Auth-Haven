@@ -61,10 +61,11 @@ The server registers `auth.AuthService`, `auth.UserService`, and `auth.SessionSe
 Handler methods that correctly override the generated contracts are:
 
 - `AuthService.Login`
+- `AuthService.RefreshToken`
 - `UserService.CreatePersonalUser`
 - `UserService.CreateCompanyAndOwner`
 - `SessionService.ListSessions`
 - `SessionService.RevokeSession`
 - `SessionService.RevokeAllSessions`
 
-The handler contains a method named `Refresh`, but the generated contract requires `RefreshToken`; therefore the `AuthService.RefreshToken` RPC currently falls through to the embedded unimplemented server. The other declared AuthService methods are also not implemented. Calls to those methods return gRPC `Unimplemented` rather than invoking domain behavior.
+The other declared AuthService methods are not implemented. Calls to those methods return gRPC `Unimplemented` rather than invoking domain behavior.

@@ -4,7 +4,7 @@ Pull requests to `main` run independent required gates so failures identify the 
 
 | Check | Purpose | Expected runtime |
 |---|---|---:|
-| `Quality` | Formatting, vetting, and non-container Go tests | under 10 minutes |
+| `Quality` | Formatting, vetting, non-container Go tests, and an atomic coverage summary | under 10 minutes |
 | `Contracts and docs` | Protobuf regeneration drift, local Markdown links, and issue-form YAML | under 10 minutes |
 | `Race` | Race detector for application and command packages | under 15 minutes |
 | `Testcontainers and migrations` | Race-enabled PostgreSQL/Redis repositories, bootstrap, idempotency, and legacy-state rejection | under 25 minutes |
@@ -22,7 +22,8 @@ Run the CI-equivalent checks before pushing:
 ```bash
 test -z "$(gofmt -l $(git ls-files '*.go'))"
 go vet ./...
-go test ./internal/... ./cmd/...
+go test ./internal/... ./cmd/... -covermode=atomic -coverprofile=coverage.out
+go tool cover -func=coverage.out
 go test -race ./internal/... ./cmd/...
 go test -race -count=1 -timeout=20m ./test/...
 ./scripts/generate-proto.sh --check

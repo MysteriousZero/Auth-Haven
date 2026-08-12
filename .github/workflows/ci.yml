@@ -34,8 +34,16 @@ jobs:
         run: test -z "$(gofmt -l .)"
       - name: Vet
         run: go vet ./...
-      - name: Run non-container tests
-        run: go test ./internal/... ./cmd/...
+      - name: Run non-container tests with coverage
+        run: go test ./internal/... ./cmd/... -covermode=atomic -coverprofile=coverage.out
+      - name: Report coverage
+        run: |
+          {
+            echo '## Non-container coverage'
+            echo '```text'
+            go tool cover -func=coverage.out
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   contracts:
     name: Contracts and docs

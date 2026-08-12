@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	pb "auth-haven/pkg/proto"
 	"auth-haven/pkg/proto/common"
@@ -54,7 +55,7 @@ func (h *GRPCHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 	// Extract tenant ID from request or context
 	tenantID := req.TenantId
 	if tenantID == "" {
-		if tid, ok := ctx.Value("tenant_id").(string); ok {
+		if tid, ok := ctx.Value("tenant-id").(string); ok {
 			tenantID = tid
 		}
 	}
@@ -84,7 +85,7 @@ func (h *GRPCHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 }
 
 // RefreshToken implements gRPC token refresh
-func (h *GRPCHandler) Refresh(ctx context.Context, req *pb.RefreshTokenRequest) (*common.Tokens, error) {
+func (h *GRPCHandler) RefreshToken(ctx context.Context, req *pb.RefreshTokenRequest) (*common.Tokens, error) {
 	tokens, err := h.authService.RefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		return nil, h.mapErrorToGRPCStatus(err)
@@ -169,28 +170,41 @@ func (h *GRPCHandler) ListSessions(ctx context.Context, req *pb.ListSessionsRequ
 		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 
-	// Use requested user ID or authenticated user ID
-	targetUserID := req.UserId
-	if targetUserID == "" {
-		targetUserID = userID
+	if req.UserId != "" && req.UserId != userID {
+		return nil, status.Error(codes.PermissionDenied, "access denied")
 	}
 
-	// For now, return empty response since session service needs more implementation
+	sessions, err := h.sessionService.ListSessions(ctx, userID, int(req.Limit), int(req.Offset))
+	if err != nil {
+		return nil, h.mapErrorToGRPCStatus(err)
+	}
+	result := make([]*pb.Session, 0, len(sessions))
+	for _, session := range sessions {
+		result = append(result, &pb.Session{
+			SessionId: session.SessionID,
+			UserId:    session.UserID,
+			IpAddress: session.IPAddress,
+			UserAgent: session.UserAgent,
+			CreatedAt: session.CreatedAt.UTC().Format(time.RFC3339),
+		})
+	}
 	return &pb.ListSessionsResponse{
-		Sessions: []*pb.Session{},
-		Total:    0,
+		Sessions: result,
+		Total:    int32(len(result)),
 	}, nil
 }
 
 // RevokeSession implements gRPC session revocation
 func (h *GRPCHandler) RevokeSession(ctx context.Context, req *pb.RevokeSessionRequest) (*pb.RevokeSessionResponse, error) {
 	// Get user ID from context for authorization
-	_, ok := ctx.Value("user-id").(string)
+	userID, ok := ctx.Value("user-id").(string)
 	if !ok {
 		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 
-	// For now, just return success since full implementation needs session service integration
+	if err := h.sessionService.RevokeSession(ctx, userID, req.SessionId); err != nil {
+		return nil, h.mapErrorToGRPCStatus(err)
+	}
 	return &pb.RevokeSessionResponse{
 		Success: true,
 	}, nil
@@ -204,13 +218,13 @@ func (h *GRPCHandler) RevokeAllSessions(ctx context.Context, req *pb.RevokeAllSe
 		return nil, status.Errorf(codes.Unauthenticated, "user not authenticated")
 	}
 
-	// Use requested user ID or authenticated user ID
-	targetUserID := req.UserId
-	if targetUserID == "" {
-		targetUserID = userID
+	if req.UserId != "" && req.UserId != userID {
+		return nil, status.Error(codes.PermissionDenied, "access denied")
 	}
 
-	// For now, just return success since full implementation needs session service integration
+	if err := h.authService.LogoutAll(ctx, userID); err != nil {
+		return nil, h.mapErrorToGRPCStatus(err)
+	}
 	return &pb.RevokeAllSessionsResponse{
 		Success:      true,
 		RevokedCount: 0,

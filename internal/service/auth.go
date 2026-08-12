@@ -68,7 +68,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 
 			TraceID: utils.GetTraceID(ctx),
 		})
-		return nil, errors.ErrTenantNotFound
+		return nil, errors.ErrInvalidCredentials
 	}
 
 	if !tenant.IsActive() {
@@ -82,7 +82,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 
 			TraceID: utils.GetTraceID(ctx),
 		})
-		return nil, errors.ErrTenantSuspended
+		return nil, errors.ErrInvalidCredentials
 	}
 
 	// Get user
@@ -113,7 +113,7 @@ func (s *authService) Login(ctx context.Context, tenantID, email, password strin
 
 			TraceID: utils.GetTraceID(ctx),
 		})
-		return nil, errors.ErrUserDisabled
+		return nil, errors.ErrInvalidCredentials
 	}
 
 	// Verify password

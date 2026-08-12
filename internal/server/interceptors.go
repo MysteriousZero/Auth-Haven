@@ -59,7 +59,7 @@ func Unary(tokenService interfaces.TokenService) grpc.UnaryServerInterceptor {
 
 			claims, err := tokenService.ValidateAccessToken(ctx, token)
 			if err != nil {
-				return nil, status.Errorf(codes.Unauthenticated, "invalid token: %v", err)
+				return nil, status.Error(codes.Unauthenticated, "invalid or expired token")
 			}
 
 			// Inject user claims into context
