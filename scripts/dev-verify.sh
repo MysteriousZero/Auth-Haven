@@ -6,7 +6,7 @@ cd "$repo_dir"
 ./scripts/dev-env.sh
 
 compose() {
-  docker compose --env-file .env.development "$@"
+  ./scripts/dev-compose.sh --env-file .env.development "$@"
 }
 
 restore_redis() {

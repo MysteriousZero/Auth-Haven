@@ -10,4 +10,4 @@ if [ ! -f "$env_file" ]; then
 fi
 
 cd "$repo_dir"
-exec docker compose --env-file .env.development down "$@"
+exec ./scripts/dev-compose.sh --env-file .env.development down "$@"

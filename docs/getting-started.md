@@ -5,14 +5,15 @@
 - Go 1.25.1 or a compatible newer toolchain
 - PostgreSQL 17 (the Compose configuration uses `postgres:17-alpine`)
 - Redis
-- Docker, if using Compose or the Testcontainers-based tests
+- Docker or Podman, if using Compose or the Testcontainers-based tests
 - `protoc` and Go protobuf plugins only when changing `.proto` files
 
 The VS Code dev container includes Go tooling, protobuf tools, Buf, Delve, and golangci-lint.
 
 ## Containerized development stack
 
-From the repository root, one command generates local-only credentials, builds
+From the repository root, one command generates local-only credentials, selects
+Docker Compose or Podman Compose, builds
 the image, applies migrations, and starts PostgreSQL, Redis, HTTP, and gRPC:
 
 ```bash
@@ -27,6 +28,9 @@ ephemeral signing key.
 
 The stack waits for PostgreSQL and Redis health, runs `cmd/migrate` as a
 one-shot service, and starts the application only after migrations succeed.
+Host ports can be changed with `HOST_POSTGRES_PORT`, `HOST_REDIS_PORT`,
+`HOST_HTTP_PORT`, and `HOST_GRPC_PORT` in `.env.development` without changing
+service-to-service ports.
 It exposes:
 
 - HTTP: `http://localhost:8080`
@@ -87,7 +91,7 @@ Generate the development environment and start PostgreSQL and Redis:
 
 ```bash
 ./scripts/dev-env.sh
-docker compose --env-file .env.development up -d db redis
+./scripts/dev-compose.sh --env-file .env.development up -d db redis
 ```
 
 When running Go processes on the host, export equivalent `DB_HOST=localhost`
