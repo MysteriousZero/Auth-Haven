@@ -1,4 +1,4 @@
-FROM golang:1.26.2
+FROM golang:1.25.1
 
 # ---------------------------------------
 # 1. System deps + full locale support
@@ -8,7 +8,6 @@ RUN apt-get update && \
     locales locales-all \
     git curl wget unzip bash \
     build-essential bash-completion \
-    protobuf-compiler \
     && sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
     && locale-gen en_US.UTF-8 \
     && update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 \
@@ -28,16 +27,16 @@ ENV LANG=en_US.UTF-8 \
 # Delve debugger
 RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
-# Protoc latest
-RUN PROTOC_VERSION=25.1 && \
+# Keep the protobuf compiler explicit and the Go plugins aligned with CI.
+RUN PROTOC_VERSION=33.4 && \
     curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
     unzip protoc-${PROTOC_VERSION}-linux-x86_64.zip -d /usr/local && \
     chmod +x /usr/local/bin/protoc && \
     rm protoc-${PROTOC_VERSION}-linux-x86_64.zip
 
 # Go protobuf + gRPC plugins
-RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest && \
-    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11 && \
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.1
 
 # golangci-lint
 RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
@@ -60,6 +59,6 @@ RUN useradd -ms /bin/bash devuser && \
 USER devuser
 WORKDIR /workspace
 
-EXPOSE 8080 40000
+EXPOSE 8080 50051 40000
 
 CMD ["bash"]

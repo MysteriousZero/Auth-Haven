@@ -7,6 +7,14 @@ also follow [`AGENTS.md`](../AGENTS.md) and the
 coverage are maintained in the [testing guide](testing.md).
 Required automation and troubleshooting are maintained in the [CI guide](ci.md).
 
+## Local stack
+
+Run `./scripts/dev-up.sh` for the shared PostgreSQL, Redis, migration, and
+application stack. The VS Code devcontainer uses those same dependency and
+migration services. Lifecycle, persistence, failure-mode verification, and
+development-secret limitations are documented in the
+[getting-started guide](getting-started.md).
+
 ## Generate protobuf code
 
 Run the pinned repository script from the repository root:

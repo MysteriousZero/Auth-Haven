@@ -16,6 +16,7 @@ bin/
 .vscode/
 .idea/
 .env
+.env.*
 *.log
 
 # Docker/Compose (Prevent self-reference issues)
