@@ -102,13 +102,6 @@ func (s *invitationService) SendInvitation(ctx context.Context, actorID, tenantI
 		return nil, fmt.Errorf("failed to create invitation: %w", err)
 	}
 
-	// Send invitation email
-	err = s.emailProvider.SendInvitationEmail(email, token)
-	if err != nil {
-		// Log but don't fail — invitation is already persisted
-		fmt.Printf("Failed to send invitation email: %v\n", err)
-	}
-
 	// Emit audit log
 	auditLog := &models.AuditLog{
 		LogID:     uuid.New().String(),
@@ -120,11 +113,14 @@ func (s *invitationService) SendInvitation(ctx context.Context, actorID, tenantI
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 	if err := s.auditRepo.CreateAuditLog(ctx, auditLog); err != nil {
 		fmt.Printf("Failed to create audit log: %v\n", err)
+	}
+
+	if err := s.emailProvider.SendInvitationEmail(email, token); err != nil {
+		return nil, fmt.Errorf("invitation persisted but delivery failed: %w", err)
 	}
 
 	return invitation, nil
@@ -177,8 +173,7 @@ func (s *invitationService) RevokeInvitation(ctx context.Context, actorID, invit
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 	if err := s.auditRepo.CreateAuditLog(ctx, auditLog); err != nil {
 		fmt.Printf("Failed to create audit log: %v\n", err)
@@ -239,12 +234,6 @@ func (s *invitationService) ResendInvitation(ctx context.Context, actorID, invit
 		return fmt.Errorf("failed to create new invitation: %w", err)
 	}
 
-	// Send invitation email
-	err = s.emailProvider.SendInvitationEmail(invitation.Email, token)
-	if err != nil {
-		fmt.Printf("Failed to send invitation email: %v\n", err)
-	}
-
 	// Emit audit log
 	auditLog := &models.AuditLog{
 		LogID:     uuid.New().String(),
@@ -256,11 +245,14 @@ func (s *invitationService) ResendInvitation(ctx context.Context, actorID, invit
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 	if err := s.auditRepo.CreateAuditLog(ctx, auditLog); err != nil {
 		fmt.Printf("Failed to create audit log: %v\n", err)
+	}
+
+	if err := s.emailProvider.SendInvitationEmail(invitation.Email, token); err != nil {
+		return fmt.Errorf("replacement invitation persisted but delivery failed: %w", err)
 	}
 
 	return nil
@@ -283,4 +275,3 @@ func (s *invitationService) requireOwnerOrAdmin(ctx context.Context, actor *mode
 	}
 	return errors.ErrForbidden
 }
-

@@ -12,6 +12,7 @@
 - [API guide](api.md) — implemented REST routes and gRPC services
 - [Development guide](development.md) — tests, protobuf generation, and contribution workflow
 - [Testing](testing.md) — current coverage, commands, and production-readiness gaps
+- [Operations runbook](runbook.md) — dependency health, degraded modes, and incident checks
 - [AI-assisted development](ai-development.md) — context map, safe change patterns, and agent handoff rules
 
 Repository-level governance and contributor documents:

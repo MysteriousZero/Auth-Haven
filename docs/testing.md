@@ -15,7 +15,7 @@ The checked-in tests concentrate on configuration, infrastructure connectivity, 
 | Redis cache wrappers | Hits, misses, population, invalidation, refresh tokens, basic performance comparison | Failure/degraded-mode behavior needs broader coverage |
 | Services | No dedicated tests found | Authentication, registration, MFA, password, invitation, role, session, and audit rules |
 | HTTP/gRPC handlers | No dedicated tests found | Request validation, status mapping, authentication, and contracts |
-| Middleware/security | No dedicated tests found | JWT rejection, tenant isolation, rate limits, CORS, and attack cases |
+| Middleware/security | CORS allowlist and Redis rate-limit outage policies | JWT rejection, tenant isolation, and broader attack cases |
 | End-to-end workflows | No dedicated tests found | Registration through login, refresh, MFA, and logout |
 
 This summary is based on test files present in the repository, not a measured coverage percentage. Run coverage tooling before making a quantitative claim.

@@ -26,6 +26,11 @@ export DB_SSLMODE=disable
 export REDIS_HOST=localhost
 export REDIS_PORT=6379
 export MFA_ENCRYPTION_KEY="$(openssl rand -base64 32)"
+export CORS_ALLOWED_ORIGINS="http://localhost:3000"
+export SMTP_HOST="localhost"
+export SMTP_PORT=1025
+export EMAIL_FROM="auth-haven@localhost"
+export PUBLIC_BASE_URL="http://localhost:3000"
 ```
 
 Keep the generated MFA key stable if encrypted MFA records must remain readable. See [Configuration](configuration.md) for all settings.
@@ -67,6 +72,8 @@ The defaults are:
 - HTTP: `http://localhost:8080`
 - gRPC: `localhost:50051`
 - Health check: `GET http://localhost:8080/health`
+- Readiness check: `GET http://localhost:8080/ready`
+- Database pool metrics: `GET http://localhost:8080/metrics`
 
 Both transports run in one process. Failure of either server terminates the process.
 

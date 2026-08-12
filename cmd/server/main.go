@@ -34,6 +34,9 @@ func main() {
 		log.Fatalf("failed to connect DB: %v", err)
 	}
 	defer conn.Close()
+	conn.SetMaxOpenConns(cfg.Database.MaxConnections)
+	conn.SetMaxIdleConns(cfg.Database.MaxIdleConns)
+	conn.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
 
 	// Test connection
 	if err := conn.Ping(); err != nil {

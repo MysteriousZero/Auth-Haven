@@ -74,7 +74,9 @@ Read-only operations are generally not audited unless policy requires it. Audit 
 - Authentication-state mutations must invalidate related session/token entries.
 - Tenant updates must invalidate ID and domain lookups.
 - Every Redis key should use the `auth:` namespace.
-- Redis failure behavior must be explicit. Cache availability may degrade to database access, but silently bypassing security rate limits is a production risk.
+- Cache failures default to fail-open database access. Rate-limit failures default to fail-closed `503` responses and may only fail open through explicit configuration; degraded responses include `X-RateLimit-Status: degraded`.
+- Production CORS uses an exact configured origin allowlist. Wildcard origins and wildcard credential combinations fail configuration validation.
+- Reset and invitation credentials are URL-escaped before delivery and are never written to application logs.
 
 ## Security review checklist
 
