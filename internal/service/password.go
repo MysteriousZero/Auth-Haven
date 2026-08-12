@@ -7,6 +7,7 @@ import (
 	"auth-haven/internal/utils"
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -77,8 +78,8 @@ func (s *passwordService) RequestPasswordReset(ctx context.Context, tenantID, em
 	// Send reset email
 	err = s.emailProvider.SendResetEmail(email, resetToken)
 	if err != nil {
-		// Log error but don't fail the request
-		fmt.Printf("Failed to send reset email: %v\n", err)
+		// Keep the public response indistinguishable from an unknown account.
+		log.Printf("password reset delivery failed: %v", err)
 	}
 
 	// Record audit log
@@ -90,8 +91,7 @@ func (s *passwordService) RequestPasswordReset(ctx context.Context, tenantID, em
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -172,8 +172,7 @@ func (s *passwordService) ResetPassword(ctx context.Context, token, newPassword 
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -233,8 +232,7 @@ func (s *passwordService) ChangePassword(ctx context.Context, userID, currentPas
 		IPAddress: utils.GetClientIP(ctx),
 		UserAgent: utils.GetUserAgent(ctx),
 
-	TraceID:   utils.GetTraceID(ctx),
-
+		TraceID: utils.GetTraceID(ctx),
 	}
 
 	err = s.auditRepo.CreateAuditLog(ctx, auditLog)
@@ -244,4 +242,3 @@ func (s *passwordService) ChangePassword(ctx context.Context, userID, currentPas
 
 	return nil
 }
-

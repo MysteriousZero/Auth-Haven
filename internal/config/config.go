@@ -16,6 +16,8 @@ type Config struct {
 	Auth        AuthConfig
 	Security    SecurityConfig
 	Redis       RedisConfig
+	CORS        CORSConfig
+	Email       EmailConfig
 }
 
 type DatabaseConfig struct {
@@ -59,10 +61,25 @@ type SecurityConfig struct {
 }
 
 type RedisConfig struct {
-	Host     string
-	Port     int
+	Host              string
+	Port              int
+	Password          string
+	DB                int
+	RateLimitFailOpen bool
+}
+
+type CORSConfig struct {
+	AllowedOrigins   []string
+	AllowCredentials bool
+}
+
+type EmailConfig struct {
+	SMTPHost string
+	SMTPPort int
+	Username string
 	Password string
-	DB       int
+	From     string
+	BaseURL  string
 }
 
 func Load() (*Config, error) {
@@ -83,6 +100,24 @@ func Load() (*Config, error) {
 		}
 	default:
 		return nil, fmt.Errorf("APP_ENV must be development, test, or production")
+	}
+
+	allowedOrigins := splitCSV(getEnv("CORS_ALLOWED_ORIGINS", "http://localhost:3000"))
+	allowCredentials := getEnvAsBool("CORS_ALLOW_CREDENTIALS", false)
+	if environment == "production" && (len(allowedOrigins) == 0 || contains(allowedOrigins, "*")) {
+		return nil, fmt.Errorf("CORS_ALLOWED_ORIGINS must contain explicit origins when APP_ENV=production")
+	}
+	if allowCredentials && contains(allowedOrigins, "*") {
+		return nil, fmt.Errorf("CORS_ALLOW_CREDENTIALS cannot be enabled with a wildcard origin")
+	}
+
+	email := EmailConfig{
+		SMTPHost: getEnv("SMTP_HOST", ""), SMTPPort: getEnvAsInt("SMTP_PORT", 587),
+		Username: getEnv("SMTP_USERNAME", ""), Password: getEnv("SMTP_PASSWORD", ""),
+		From: getEnv("EMAIL_FROM", ""), BaseURL: strings.TrimRight(getEnv("PUBLIC_BASE_URL", "http://localhost:3000"), "/"),
+	}
+	if environment == "production" && (email.SMTPHost == "" || email.From == "" || email.BaseURL == "") {
+		return nil, fmt.Errorf("SMTP_HOST, EMAIL_FROM, and PUBLIC_BASE_URL are required when APP_ENV=production")
 	}
 
 	return &Config{
@@ -115,12 +150,34 @@ func Load() (*Config, error) {
 			MFAEncryptionKey:       getEnv("MFA_ENCRYPTION_KEY", ""),
 		},
 		Redis: RedisConfig{
-			Host:     getEnv("REDIS_HOST", "localhost"),
-			Port:     getEnvAsInt("REDIS_PORT", 6379),
-			Password: getEnv("REDIS_PASSWORD", ""),
-			DB:       getEnvAsInt("REDIS_DB", 0),
+			Host:              getEnv("REDIS_HOST", "localhost"),
+			Port:              getEnvAsInt("REDIS_PORT", 6379),
+			Password:          getEnv("REDIS_PASSWORD", ""),
+			DB:                getEnvAsInt("REDIS_DB", 0),
+			RateLimitFailOpen: getEnvAsBool("REDIS_RATE_LIMIT_FAIL_OPEN", false),
 		},
+		CORS:  CORSConfig{AllowedOrigins: allowedOrigins, AllowCredentials: allowCredentials},
+		Email: email,
 	}, nil
+}
+
+func splitCSV(value string) []string {
+	var values []string
+	for _, item := range strings.Split(value, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			values = append(values, item)
+		}
+	}
+	return values
+}
+
+func contains(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
 }
 
 func loadAuthConfig() (AuthConfig, error) {

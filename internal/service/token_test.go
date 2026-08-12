@@ -57,6 +57,51 @@ func TestTokenServicesShareKeysAcrossReplicas(t *testing.T) {
 	}
 }
 
+func TestSigningKeysSurviveProviderRestart(t *testing.T) {
+	_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded := base64.StdEncoding.EncodeToString(privateKey)
+	beforeRestart, err := NewStaticSigningKeyProvider("active", encoded, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pair, err := NewTokenService(beforeRestart, time.Minute, time.Minute, 0).GenerateTokenPair("user", "tenant", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	afterRestart, err := NewStaticSigningKeyProvider("active", encoded, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewTokenService(afterRestart, time.Minute, time.Minute, 0).ValidateAccessToken(context.Background(), pair.AccessToken); err != nil {
+		t.Fatalf("restarted provider rejected existing token: %v", err)
+	}
+}
+
+func TestSigningKeyProviderRejectsMalformedKeyMaterial(t *testing.T) {
+	tests := []struct {
+		name             string
+		keyID            string
+		privateKey       string
+		verificationKeys map[string]string
+	}{
+		{name: "missing key ID", privateKey: base64.StdEncoding.EncodeToString(make([]byte, ed25519.PrivateKeySize))},
+		{name: "malformed private key", keyID: "active", privateKey: "not-base64"},
+		{name: "wrong private key length", keyID: "active", privateKey: base64.StdEncoding.EncodeToString([]byte("short"))},
+		{name: "malformed retained public key", keyID: "active", privateKey: base64.StdEncoding.EncodeToString(make([]byte, ed25519.PrivateKeySize)), verificationKeys: map[string]string{"old": "not-base64"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := NewStaticSigningKeyProvider(test.keyID, test.privateKey, test.verificationKeys); err == nil {
+				t.Fatal("NewStaticSigningKeyProvider() accepted unsafe key material")
+			}
+		})
+	}
+}
+
 func TestSigningKeyRotationOverlapAndRevocation(t *testing.T) {
 	oldPublic, oldPrivate, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {

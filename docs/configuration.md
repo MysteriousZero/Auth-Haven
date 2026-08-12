@@ -12,11 +12,11 @@ All configuration is read from environment variables by `internal/config`. Durat
 | `DB_PASSWORD` | empty | Database password |
 | `DB_NAME` | `auth_haven` | Database name |
 | `DB_SSLMODE` | `disable` | lib/pq SSL mode |
-| `DB_MAX_CONNECTIONS` | `25` | Configured maximum connection count |
-| `DB_MAX_IDLE_CONNS` | `5` | Configured idle connection count |
-| `DB_CONN_MAX_LIFETIME` | `5m` | Configured connection lifetime |
+| `DB_MAX_CONNECTIONS` | `25` | Maximum open connection count |
+| `DB_MAX_IDLE_CONNS` | `5` | Maximum idle connection count |
+| `DB_CONN_MAX_LIFETIME` | `5m` | Maximum connection lifetime |
 
-The current server opens the database using `database/sql`, but does not apply the three pool tuning values when constructing the connection.
+The server applies all three values to `database/sql`. Current pool statistics are exposed in Prometheus text format at `GET /metrics`.
 
 ## Server
 
@@ -79,3 +79,28 @@ The server treats a missing or incorrectly sized MFA key as fatal. Generate one 
 | `REDIS_PORT` | `6379` | Redis port |
 | `REDIS_PASSWORD` | empty | Redis password |
 | `REDIS_DB` | `0` | Logical Redis database |
+| `REDIS_RATE_LIMIT_FAIL_OPEN` | `false` | Allow protected endpoints to continue when Redis rate limiting is unavailable |
+
+Cache access always fails open to PostgreSQL. Redis is a required startup and readiness dependency when rate limiting is fail-closed. Rate limiting defaults to fail-closed because silently bypassing brute-force controls is unsafe.
+
+## Browser clients
+
+| Variable | Default | Meaning |
+|---|---:|---|
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:3000` | Comma-separated exact browser origins |
+| `CORS_ALLOW_CREDENTIALS` | `false` | Permit credentialed cross-origin requests |
+
+Production requires at least one explicit origin and rejects `*`. Credentialed CORS can never be combined with a wildcard.
+
+## Email delivery
+
+| Variable | Default | Meaning |
+|---|---:|---|
+| `SMTP_HOST` | empty | SMTP server host |
+| `SMTP_PORT` | `587` | SMTP server port |
+| `SMTP_USERNAME` | empty | Optional SMTP authentication username |
+| `SMTP_PASSWORD` | empty | Optional SMTP authentication password |
+| `EMAIL_FROM` | empty | Envelope and message sender |
+| `PUBLIC_BASE_URL` | `http://localhost:3000` | Public application URL used in reset and invitation links |
+
+Production requires `SMTP_HOST`, `EMAIL_FROM`, and `PUBLIC_BASE_URL`. Delivery failures never log raw reset or invitation tokens. Password-reset responses remain enumeration-resistant; operators observe delivery failures in server logs. Invitation delivery failures are returned to the authenticated caller after persistence so they can retry.

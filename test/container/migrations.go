@@ -1,6 +1,8 @@
 package container
 
 import (
+	appmigration "auth-haven/internal/migration"
+	"context"
 	"database/sql"
 	"path/filepath"
 	"runtime"
@@ -14,6 +16,9 @@ import (
 // RunMigrations applies the same golang-migrate lineage used by cmd/migrate.
 func RunMigrations(t *testing.T, dbName string, db *sql.DB) {
 	t.Helper()
+	if err := appmigration.ValidateState(context.Background(), db); err != nil {
+		t.Fatalf("migration preflight: %v", err)
+	}
 
 	driver, err := databasepostgres.WithInstance(db, &databasepostgres.Config{})
 	if err != nil {

@@ -1,7 +1,10 @@
 package container
 
 import (
+	appmigration "auth-haven/internal/migration"
+	"context"
 	"database/sql"
+	"fmt"
 	"testing"
 )
 
@@ -12,6 +15,55 @@ func TestMigrationsCleanBootstrap(t *testing.T) {
 	RunMigrations(t, pc.Database, pc.DB)
 	assertMigrationVersion(t, pc.DB, 1)
 	assertAuthoritativeSchema(t, pc.DB)
+}
+
+func TestMigrationsCurrentBaselineIsIdempotent(t *testing.T) {
+	pc := SetupPostgresContainer(t)
+	defer TeardownPostgresContainer(t, pc)
+	RunMigrations(t, pc.Database, pc.DB)
+	RunMigrations(t, pc.Database, pc.DB)
+	assertMigrationVersion(t, pc.DB, 1)
+	assertAuthoritativeSchema(t, pc.DB)
+}
+
+func TestMigrationPreflightRejectsLegacyLineages(t *testing.T) {
+	t.Run("untracked", func(t *testing.T) {
+		pc := SetupPostgresContainer(t)
+		defer TeardownPostgresContainer(t, pc)
+		if _, err := pc.DB.Exec(`CREATE TABLE tenants (tenant_id uuid PRIMARY KEY)`); err != nil {
+			t.Fatal(err)
+		}
+		if err := appmigration.ValidateState(context.Background(), pc.DB); err == nil {
+			t.Fatal("untracked legacy schema was accepted")
+		}
+		if _, err := pc.DB.Exec(`INSERT INTO tenants (tenant_id) VALUES ('00000000-0000-0000-0000-000000000001')`); err != nil {
+			t.Fatalf("legacy data table was mutated: %v", err)
+		}
+	})
+
+	for _, version := range []int{1, 7} {
+		t.Run(fmt.Sprintf("version_%d", version), func(t *testing.T) {
+			pc := SetupPostgresContainer(t)
+			defer TeardownPostgresContainer(t, pc)
+			if _, err := pc.DB.Exec(`CREATE TABLE schema_migrations (version bigint NOT NULL, dirty boolean NOT NULL)`); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := pc.DB.Exec(`INSERT INTO schema_migrations (version, dirty) VALUES ($1, false)`, version); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := pc.DB.Exec(`CREATE TABLE tenants (tenant_id uuid PRIMARY KEY)`); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := appmigration.ValidateState(context.Background(), pc.DB); err == nil {
+				t.Fatalf("legacy migration version %d was accepted", version)
+			}
+			var count int
+			if err := pc.DB.QueryRow(`SELECT COUNT(*) FROM tenants`).Scan(&count); err != nil {
+				t.Fatalf("legacy data table was mutated: %v", err)
+			}
+		})
+	}
 }
 
 func assertMigrationVersion(t *testing.T, db *sql.DB, want int) {

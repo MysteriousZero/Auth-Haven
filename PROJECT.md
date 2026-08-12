@@ -48,11 +48,8 @@ When these disagree, treat the disagreement as drift to resolve—not as permiss
 
 - Several declared gRPC AuthService methods fall through to `Unimplemented`; the refresh handler method is incorrectly named `Refresh` instead of `RefreshToken`.
 - The gRPC validation interceptor is a pass-through.
-- HTTP CORS currently permits every origin.
-- Email delivery is constructed with empty SMTP configuration.
 - Role services are not wired to HTTP routes.
 - Token TTL configuration is not consistently consumed by token-generation code.
-- Database pool settings are loaded but not applied to `database/sql`.
 - Automated tests do not yet adequately cover services, transports, middleware, security, or end-to-end workflows.
 
 ## Roadmap

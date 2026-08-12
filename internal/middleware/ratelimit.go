@@ -15,12 +15,28 @@ import (
 
 type RateLimiter struct {
 	redisClient *redis.Client
+	failOpen    bool
 }
 
-func NewRateLimiter(redisClient *redis.Client) *RateLimiter {
+func NewRateLimiter(redisClient *redis.Client, failOpen ...bool) *RateLimiter {
+	allowOnFailure := false
+	if len(failOpen) > 0 {
+		allowOnFailure = failOpen[0]
+	}
 	return &RateLimiter{
 		redisClient: redisClient,
+		failOpen:    allowOnFailure,
 	}
+}
+
+func (rl *RateLimiter) handleFailure(c *gin.Context, err error) bool {
+	if rl.failOpen {
+		c.Header("X-RateLimit-Status", "degraded")
+		return true
+	}
+	c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Service temporarily unavailable"})
+	c.Abort()
+	return false
 }
 
 // Rate limiting configurations
@@ -109,10 +125,9 @@ func (rl *RateLimiter) LoginRateLimit() gin.HandlerFunc {
 		allowed, retryAfter, err := rl.CheckRateLimit(c.Request.Context(),
 			fmt.Sprintf("rate_limit:login:ip:%s", ip), loginLimits["ip"])
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error",
-			})
-			c.Abort()
+			if rl.handleFailure(c, err) {
+				c.Next()
+			}
 			return
 		}
 
@@ -131,10 +146,9 @@ func (rl *RateLimiter) LoginRateLimit() gin.HandlerFunc {
 			allowed, retryAfter, err = rl.CheckRateLimit(c.Request.Context(),
 				fmt.Sprintf("rate_limit:login:email:%s", strings.ToLower(email)), loginLimits["email"])
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error": "Internal server error",
-				})
-				c.Abort()
+				if rl.handleFailure(c, err) {
+					c.Next()
+				}
 				return
 			}
 
@@ -160,10 +174,9 @@ func (rl *RateLimiter) PasswordForgotRateLimit() gin.HandlerFunc {
 		allowed, retryAfter, err := rl.CheckRateLimit(c.Request.Context(),
 			fmt.Sprintf("rate_limit:password_forgot:ip:%s", ip), passwordForgotLimits["ip"])
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error",
-			})
-			c.Abort()
+			if rl.handleFailure(c, err) {
+				c.Next()
+			}
 			return
 		}
 
@@ -188,10 +201,9 @@ func (rl *RateLimiter) MFAVerifyRateLimit() gin.HandlerFunc {
 		allowed, retryAfter, err := rl.CheckRateLimit(c.Request.Context(),
 			fmt.Sprintf("rate_limit:mfa:ip:%s", ip), mfaLimits["ip"])
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Internal server error",
-			})
-			c.Abort()
+			if rl.handleFailure(c, err) {
+				c.Next()
+			}
 			return
 		}
 

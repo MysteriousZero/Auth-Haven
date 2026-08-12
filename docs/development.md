@@ -44,6 +44,6 @@ Confirm generated package paths and compile the repository after regeneration. `
 - Documentation and implementation can drift; verify registered routes and constructed dependencies.
 - HTTP and gRPC currently build separate repository/service graphs, and gRPC does not use the Redis caching wrappers.
 - The gRPC validation interceptor is currently a pass-through.
-- CORS currently allows every origin; the [security architecture](security.md) records the stricter production requirement.
-- Email delivery is constructed with empty SMTP configuration and should be treated as a placeholder.
+- CORS uses an environment-configured exact-origin allowlist and rejects wildcard origins in production.
+- SMTP delivery is configured through environment variables; production startup requires the host, sender, and public link base URL.
 - Role business logic exists, but the HTTP server deliberately leaves `roleService` unwired to a handler.

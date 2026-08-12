@@ -34,7 +34,9 @@ For gRPC, `internal/server/grpc.go` registers protobuf services. Unary intercept
 
 PostgreSQL is the system of record. Repository implementations use `database/sql`; transaction support is passed through context. Migrations define tenants, users, roles, permissions, sessions, devices, tokens, MFA methods, resets, invitations, and audit logs.
 
-Redis is used by HTTP rate limiting and cached tenant/auth repositories. Startup logs a warning if Redis is unavailable and continues, so affected operations may be degraded rather than the process failing immediately.
+Redis is used by HTTP rate limiting and cached tenant/auth repositories. Cache outages degrade to PostgreSQL; rate-limit outages follow an independent configured policy. Redis is a required startup and readiness dependency when rate limiting is fail-closed.
+
+The HTTP server exposes liveness at `/health`, dependency-aware readiness at `/ready`, and `database/sql` pool statistics at `/metrics`.
 
 ## Security model
 

@@ -3,6 +3,10 @@ package service
 import (
 	"auth-haven/internal/domain/interfaces"
 	"fmt"
+	"net/mail"
+	"net/smtp"
+	"net/url"
+	"strings"
 )
 
 type emailProvider struct {
@@ -11,98 +15,58 @@ type emailProvider struct {
 	username string
 	password string
 	from     string
+	baseURL  string
 }
 
-func NewEmailProvider(smtpHost string, smtpPort int, username, password, from string) interfaces.EmailProvider {
-	return &emailProvider{
-		smtpHost: smtpHost,
-		smtpPort: smtpPort,
-		username: username,
-		password: password,
-		from:     from,
+func NewEmailProvider(smtpHost string, smtpPort int, username, password, from string, baseURL ...string) interfaces.EmailProvider {
+	publicURL := "http://localhost:3000"
+	if len(baseURL) > 0 && baseURL[0] != "" {
+		publicURL = strings.TrimRight(baseURL[0], "/")
 	}
+	return &emailProvider{smtpHost: smtpHost, smtpPort: smtpPort, username: username, password: password, from: from, baseURL: publicURL}
 }
 
 func (e *emailProvider) SendResetEmail(email, token string) error {
-	// In production, use a proper SMTP client like net/smtp or a service like SendGrid
-	// For now, we'll just log the email that would be sent
-	resetURL := fmt.Sprintf("https://api.auth-haven.com/v1/auth/reset-password?token=%s", token)
-	
-	subject := "Auth Haven - Password Reset Request"
-	body := fmt.Sprintf(`
-Hello,
-
-You have requested to reset your password for your Auth Haven account.
-
-Click the link below to reset your password:
-%s
-
-This link will expire in 1 hour.
-
-If you did not request a password reset, please ignore this email.
-
-Best regards,
-The Auth Haven Team
-`, resetURL)
-
-	fmt.Printf("=== EMAIL TO BE SENT ===\n")
-	fmt.Printf("To: %s\n", email)
-	fmt.Printf("Subject: %s\n", subject)
-	fmt.Printf("Body:\n%s\n", body)
-	fmt.Printf("========================\n")
-	
-	// TODO: Implement actual email sending
-	// Example with net/smtp:
-	/*
-	auth := smtp.PlainAuth("", e.username, e.password, e.smtpHost)
-	msg := "To: " + email + "\r\n" +
-		"Subject: " + subject + "\r\n" +
-		"\r\n" +
-		body
-	
-	err := smtp.SendMail(
-		fmt.Sprintf("%s:%d", e.smtpHost, e.smtpPort),
-		auth,
-		e.from,
-		[]string{email},
-		[]byte(msg),
-	)
-	
-	return err
-	*/
-	
-	return nil
+	link := e.baseURL + "/reset-password?token=" + url.QueryEscape(token)
+	return e.send(email, "Auth Haven - Password Reset Request", "Use this link to reset your password:\n\n"+link+"\n\nIf you did not request this, ignore this email.")
 }
 
 func (e *emailProvider) SendInvitationEmail(email, token string) error {
-	// In production, use a proper SMTP client or email service
-	// For now, we'll just log the email that would be sent
-	invitationURL := fmt.Sprintf("https://api.auth-haven.com/v1/auth/register/invitation?token=%s", token)
-	
-	subject := "Auth Haven - Invitation to Join"
-	body := fmt.Sprintf(`
-Hello,
+	link := e.baseURL + "/register/invitation?token=" + url.QueryEscape(token)
+	return e.send(email, "Auth Haven - Invitation to Join", "Use this link to accept your invitation:\n\n"+link)
+}
 
-You have been invited to join Auth Haven!
-
-Click the link below to complete your registration:
-%s
-
-This invitation link will expire in 7 days.
-
-If you are not interested in this invitation, please ignore this email.
-
-Best regards,
-The Auth Haven Team
-`, invitationURL)
-
-	fmt.Printf("=== EMAIL TO BE SENT ===\n")
-	fmt.Printf("To: %s\n", email)
-	fmt.Printf("Subject: %s\n", subject)
-	fmt.Printf("Body:\n%s\n", body)
-	fmt.Printf("========================\n")
-	
-	// TODO: Implement actual email sending
+func (e *emailProvider) send(to, subject, body string) error {
+	if e.smtpHost == "" || e.smtpPort <= 0 || e.from == "" {
+		return fmt.Errorf("email provider is not configured")
+	}
+	recipient, err := parseMailbox("recipient", to)
+	if err != nil {
+		return err
+	}
+	sender, err := parseMailbox("sender", e.from)
+	if err != nil {
+		return err
+	}
+	var auth smtp.Auth
+	if e.username != "" {
+		auth = smtp.PlainAuth("", e.username, e.password, e.smtpHost)
+	}
+	// Keep the untrusted envelope recipient out of message headers entirely.
+	message := []byte("From: " + sender.String() + "\r\nTo: undisclosed-recipients:;\r\nSubject: " + subject + "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body)
+	if err := smtp.SendMail(fmt.Sprintf("%s:%d", e.smtpHost, e.smtpPort), auth, sender.Address, []string{recipient.Address}, message); err != nil {
+		return fmt.Errorf("send email: %w", err)
+	}
 	return nil
 }
 
+func parseMailbox(field, value string) (*mail.Address, error) {
+	if strings.ContainsAny(value, "\r\n") {
+		return nil, fmt.Errorf("invalid email %s", field)
+	}
+	address, err := mail.ParseAddress(value)
+	if err != nil || address.Address == "" {
+		return nil, fmt.Errorf("invalid email %s", field)
+	}
+	return address, nil
+}

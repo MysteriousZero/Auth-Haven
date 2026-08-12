@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -34,6 +35,7 @@ func main() {
 		log.Fatalf("failed to connect DB: %v", err)
 	}
 	defer conn.Close()
+	configureDatabasePool(conn, cfg.Database)
 
 	// Test connection
 	if err := conn.Ping(); err != nil {
@@ -67,4 +69,16 @@ func main() {
 	if err := server.StartGRPC(cfg, conn, tokenService); err != nil {
 		log.Fatalf("gRPC server failed: %v", err)
 	}
+}
+
+type databasePoolConfigurer interface {
+	SetMaxOpenConns(int)
+	SetMaxIdleConns(int)
+	SetConnMaxLifetime(time.Duration)
+}
+
+func configureDatabasePool(db databasePoolConfigurer, cfg config.DatabaseConfig) {
+	db.SetMaxOpenConns(cfg.MaxConnections)
+	db.SetMaxIdleConns(cfg.MaxIdleConns)
+	db.SetConnMaxLifetime(cfg.ConnMaxLifetime)
 }

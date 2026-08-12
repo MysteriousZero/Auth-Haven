@@ -13,6 +13,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -27,12 +29,16 @@ func StartHTTP(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
+	defer redisClient.Close()
 
 	// Check Redis connection (Ping)
 	ctxPing, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := redisClient.Ping(ctxPing).Err(); err != nil {
-		log.Printf("Warning: Redis connection failed: %v. Rate limiting and caching may be degraded.", err)
+		if !cfg.Redis.RateLimitFailOpen {
+			return fmt.Errorf("required Redis dependency unavailable: %w", err)
+		}
+		log.Printf("Redis unavailable; cache and rate limiting are operating in configured fail-open mode: %v", err)
 	}
 
 	// Repositories
@@ -52,7 +58,7 @@ func StartHTTP(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 
 	// Core services
 	hasher := service.NewHasher()
-	emailProvider := service.NewEmailProvider("", 0, "", "", "")
+	emailProvider := service.NewEmailProvider(cfg.Email.SMTPHost, cfg.Email.SMTPPort, cfg.Email.Username, cfg.Email.Password, cfg.Email.From, cfg.Email.BaseURL)
 	domainChecker := service.NewDomainChecker()
 	totpGen := service.NewTOTPGenerator()
 
@@ -102,14 +108,14 @@ func StartHTTP(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 	auditHandler := handlers.NewAuditHandler(auditService)
 
 	// Rate Limiter
-	limiter := middleware.NewRateLimiter(redisClient)
+	limiter := middleware.NewRateLimiter(redisClient, cfg.Redis.RateLimitFailOpen)
 
 	// Suppress unused variable warning for roleService — will be used when role handler is added
 	_ = roleService
 
 	// Gin router
 	router := gin.Default()
-	router.Use(corsMiddleware())
+	router.Use(corsMiddleware(cfg.CORS))
 	router.Use(requestIDMiddleware())
 	router.Use(loggingMiddleware())
 
@@ -117,6 +123,8 @@ func StartHTTP(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
+	router.GET("/ready", readinessHandler(db, redisClient, !cfg.Redis.RateLimitFailOpen))
+	router.GET("/metrics", databaseMetricsHandler(db))
 
 	v1 := router.Group("/v1")
 
@@ -187,9 +195,30 @@ func StartHTTP(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 	return router.Run(addr)
 }
 
-func corsMiddleware() gin.HandlerFunc {
+func corsMiddleware(cfg config.CORSConfig) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(cfg.AllowedOrigins))
+	for _, origin := range cfg.AllowedOrigins {
+		allowed[origin] = struct{}{}
+	}
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		_, explicit := allowed[origin]
+		_, wildcard := allowed["*"]
+		if origin != "" && !explicit && !wildcard {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+		if origin != "" {
+			if wildcard {
+				c.Header("Access-Control-Allow-Origin", "*")
+			} else {
+				c.Header("Access-Control-Allow-Origin", origin)
+				c.Header("Vary", "Origin")
+			}
+		}
+		if cfg.AllowCredentials {
+			c.Header("Access-Control-Allow-Credentials", "true")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, X-Session-ID")
 
@@ -199,6 +228,48 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 
 		c.Next()
+	}
+}
+
+type redisPinger interface {
+	Ping(context.Context) *redis.StatusCmd
+}
+
+func readinessHandler(db *sql.DB, redisClient redisPinger, redisRequired bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+		dependencies := gin.H{"database": "ok", "redis": "ok"}
+		ready := true
+		if err := db.PingContext(ctx); err != nil {
+			dependencies["database"] = "unavailable"
+			ready = false
+		}
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			dependencies["redis"] = "unavailable"
+			if redisRequired {
+				ready = false
+			}
+		}
+		status := http.StatusOK
+		if !ready {
+			status = http.StatusServiceUnavailable
+		}
+		c.JSON(status, gin.H{"status": map[bool]string{true: "ready", false: "not_ready"}[ready], "dependencies": dependencies})
+	}
+}
+
+func databaseMetricsHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		stats := db.Stats()
+		lines := []string{
+			fmt.Sprintf("auth_haven_db_max_open_connections %d", stats.MaxOpenConnections),
+			fmt.Sprintf("auth_haven_db_open_connections %d", stats.OpenConnections),
+			fmt.Sprintf("auth_haven_db_in_use_connections %d", stats.InUse),
+			fmt.Sprintf("auth_haven_db_idle_connections %d", stats.Idle),
+			fmt.Sprintf("auth_haven_db_wait_count %d", stats.WaitCount),
+		}
+		c.Data(http.StatusOK, "text/plain; version=0.0.4; charset=utf-8", []byte(strings.Join(lines, "\n")+"\n"))
 	}
 }
 

@@ -24,6 +24,7 @@ type authService struct {
 	encryptionKey []byte
 	refreshTTL    time.Duration
 	sessionTTL    time.Duration
+	now           func() time.Time
 }
 
 func NewAuthService(
@@ -49,6 +50,7 @@ func NewAuthService(
 		encryptionKey: encryptionKey,
 		refreshTTL:    refreshTTL,
 		sessionTTL:    sessionTTL,
+		now:           time.Now,
 	}
 }
 
@@ -245,7 +247,7 @@ func (s *authService) completeLogin(ctx context.Context, user *models.User, tena
 	session := &models.Session{
 		SessionID: sessionID,
 		UserID:    user.UserID,
-		ExpiresAt: time.Now().UTC().Add(s.sessionTTL),
+		ExpiresAt: s.now().UTC().Add(s.sessionTTL),
 	}
 
 	err = s.authRepo.CreateSession(ctx, session)
@@ -264,7 +266,7 @@ func (s *authService) completeLogin(ctx context.Context, user *models.User, tena
 		TokenID:   uuid.New().String(),
 		UserID:    user.UserID,
 		TokenHash: s.hasher.HashToken(tokenPair.RefreshToken),
-		ExpiresAt: time.Now().UTC().Add(s.refreshTTL),
+		ExpiresAt: s.now().UTC().Add(s.refreshTTL),
 	}
 
 	err = s.authRepo.CreateRefreshToken(ctx, refreshToken)
@@ -384,7 +386,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshTokenRaw string) 
 		return nil, errors.ErrInvalidToken
 	}
 
-	if time.Now().UTC().After(refreshToken.ExpiresAt) {
+	if s.now().UTC().After(refreshToken.ExpiresAt) {
 		return nil, errors.ErrTokenExpired
 	}
 
@@ -417,7 +419,7 @@ func (s *authService) RefreshToken(ctx context.Context, refreshTokenRaw string) 
 		TokenHash: s.hasher.HashToken(tokenPair.RefreshToken),
 		UserAgent: refreshToken.UserAgent,
 		IPAddress: refreshToken.IPAddress,
-		ExpiresAt: time.Now().UTC().Add(s.refreshTTL),
+		ExpiresAt: s.now().UTC().Add(s.refreshTTL),
 	}
 
 	err = s.authRepo.CreateRefreshToken(ctx, newRefreshToken)
