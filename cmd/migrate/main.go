@@ -2,12 +2,16 @@ package main
 
 import (
 	"auth-haven/internal/config"
+	appmigration "auth-haven/internal/migration"
+	"context"
+	"database/sql"
 	"fmt"
 	"log"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -25,6 +29,14 @@ func main() {
 		cfg.Database.DBName,
 		cfg.Database.SSLMode,
 	)
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatalf("failed to open database for migration preflight: %v", err)
+	}
+	defer db.Close()
+	if err := appmigration.ValidateState(context.Background(), db); err != nil {
+		log.Fatalf("migration preflight failed: %v", err)
+	}
 
 	m, err := migrate.New("file://migrations", connStr)
 	if err != nil {

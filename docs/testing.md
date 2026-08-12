@@ -7,7 +7,7 @@ The checked-in tests concentrate on configuration, infrastructure connectivity, 
 | Area | Evidence in the repository | Current gap |
 |---|---|---|
 | Configuration | Environment loading, defaults, invalid-value fallback, PostgreSQL/Redis integration | No notable gap in the loader's current behavior |
-| Test infrastructure | PostgreSQL and Redis Testcontainers, connection validation, and clean migration bootstrap | Requires Docker locally and in CI |
+| Test infrastructure | PostgreSQL and Redis Testcontainers, connection validation, clean/idempotent migration bootstrap, and rejection of legacy migration states | Requires Docker locally and in CI |
 | Tenant repository | Tenant and invitation CRUD, personal/organization cases | Service-level tenant rules are not covered |
 | User repository | CRUD, status, role, password, last-login, duplicate email | Authorization rules are not covered |
 | Auth repository | Sessions and refresh-token lifecycle | Full login/token workflows are not covered |
