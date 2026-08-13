@@ -1,16 +1,21 @@
 services:
   auth-haven-dev:
     build:
-      context: .
+      context: ..
       dockerfile: .devcontainer/Dockerfile
 
+    image: auth-haven-dev:latest
+
+    userns_mode: keep-id
+
     volumes:
-      - .:/workspace:cached
+      - ..:/workspace
       - go-mod-cache:/go/pkg/mod
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /run/user/1000/podman/podman.sock:/var/run/docker.sock
+      - ${HOME}/.config/gh:/home/devuser/.config/gh:ro,Z
 
     env_file:
-      - .env.development
+      - ../.env.development
 
     depends_on:
       db:
@@ -29,15 +34,55 @@ services:
       - GOPATH=/go
       - LANG=en_US.UTF-8
       - LC_ALL=en_US.UTF-8
-      - OPENAI_BASE_URL=http://model-runner.docker.internal/engines/llama.cpp/v1
-      - MODEL_NAME=gemma3
-      # Testcontainers — tell it where the Docker socket is inside the container
       - DOCKER_HOST=unix:///var/run/docker.sock
       - TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE=/var/run/docker.sock
-      # Stops testcontainers from trying to pull Ryuk over the network on every run
       - TESTCONTAINERS_RYUK_DISABLED=false
 
-    mem_limit: 4g
-    cpus: "2"
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file:
+      - ../.env.development
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    env_file:
+      - ../.env.development
+    command:
+      [
+        "sh",
+        "-c",
+        "exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""
+      ]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: ..
+      target: final
+    env_file:
+      - ../.env.development
+    entrypoint: ["/bin/migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
 volumes:
   go-mod-cache:
+  postgres-data:
+  redis-data:
