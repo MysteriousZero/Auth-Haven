@@ -15,6 +15,8 @@ Pull requests to `main` run independent required gates so failures identify the 
 
 All third-party actions are pinned to immutable commit SHAs. Workflow permissions default to read-only. CodeQL alone receives `security-events: write`; no pull-request workflow executes repository secrets or uses `pull_request_target`.
 
+CodeQL runs for every pull request because `Analyze Go` is a required branch-protection context. Do not add pull-request path filters to that workflow: when a required workflow is skipped, GitHub leaves its context pending and blocks the pull request indefinitely. Push-triggered CodeQL runs remain path-filtered to code and build/configuration changes.
+
 ## Local checks
 
 Run the CI-equivalent checks before pushing:
@@ -49,4 +51,4 @@ Suppress an alert only when a maintainer documents the rule, affected path, evid
 
 ## Required checks
 
-Branch protection must require every check in the table above, use strict up-to-date branches, and apply to administrators. Required check names are contracts: rename a job only while updating branch protection in the same maintenance window.
+Branch protection must require every check in the table above, use strict up-to-date branches, and apply to administrators. Required check names are contracts: rename a job or change its pull-request trigger only while updating branch protection in the same maintenance window.

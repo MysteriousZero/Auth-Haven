@@ -4,21 +4,6 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - "**/*.go"
-      - "go.mod"
-      - "go.sum"
-      - "api/proto/**"
-      - "migrations/**"
-      - "scripts/**"
-      - "Makefile"
-      - "Dockerfile"
-      - "**/Dockerfile"
-      - "docker-compose*.yml"
-      - "docker-compose*.yaml"
-      - ".devcontainer/**"
-      - ".github/actions/**"
-      - ".github/workflows/**"
   push:
     branches:
       - main
