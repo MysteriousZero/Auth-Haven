@@ -39,19 +39,30 @@ RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11 && \
     go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.1
 
 # golangci-lint
-RUN curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-    | sh -s -- -b /go/bin
+RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 # Buf CLI
 RUN curl -sSL https://github.com/bufbuild/buf/releases/download/v1.26.0/buf-Linux-x86_64 \
     -o /usr/local/bin/buf && chmod +x /usr/local/bin/buf
 
 # -------------------------
+# GitHub CLI
+# -------------------------
+RUN mkdir -p -m 755 /etc/apt/keyrings && \
+    wget -qO /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+      https://cli.github.com/packages/githubcli-archive-keyring.gpg && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gh && \
+    rm -rf /var/lib/apt/lists/*
+
+# -------------------------
 # 3. Create non-root user
 # -------------------------
-# Pin docker group to GID 0 so it matches the host docker socket GID.
-# Since the socket is owned by root:root on the host, we add devuser to the root group.
-RUN useradd -ms /bin/bash devuser && \
+RUN groupadd --gid 1000 devuser && \
+    useradd --uid 1000 --gid 1000 -ms /bin/bash devuser && \
     usermod -aG root devuser && \
     mkdir -p /go/pkg /go/bin /workspace && \
     chown -R devuser:devuser /go /workspace

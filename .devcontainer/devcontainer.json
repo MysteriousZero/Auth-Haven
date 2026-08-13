@@ -1,9 +1,10 @@
 {
   "name": "Go Dev Container",
-  "dockerComposeFile": ["../docker-compose.yaml", "docker-compose.yaml"],
+  "dockerComposeFile": "./docker-compose.yaml",
   "service": "auth-haven-dev",
   "workspaceFolder": "/workspace",
   "remoteUser": "devuser",
+  "updateRemoteUserUID": false,
   "initializeCommand": "./scripts/dev-env.sh",
   "runServices": ["db", "redis", "migrate", "auth-haven-dev"],
   "postCreateCommand": "go mod download",
@@ -12,6 +13,8 @@
       "extensions": [
         "golang.go",
         "esbenp.prettier-vscode",
+        "openai.chatgpt",
+        "ms-vscode.vscode-chat-customizations-evaluations",
         "ms-azuretools.vscode-docker",
         "eamodio.gitlens",
         "z01.protobuf-helper",
@@ -29,13 +32,7 @@
       "servers": {
         "mcp-docker": {
           "command": "docker",
-          "args": [
-            "mcp",
-            "run",
-            "gateway",
-            "--profile",
-            "go-dev"
-          ]
+          "args": ["mcp", "run", "gateway", "--profile", "go-dev"]
         }
       }
     }

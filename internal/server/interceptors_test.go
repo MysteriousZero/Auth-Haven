@@ -8,6 +8,7 @@ import (
 
 	"auth-haven/internal/domain/interfaces"
 	"auth-haven/internal/domain/models"
+	pb "auth-haven/pkg/proto"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -74,5 +75,42 @@ func TestUnaryInterceptorInjectsClaimsAndLeavesPublicMethodsPublic(t *testing.T)
 	)
 	if err != nil {
 		t.Fatalf("public call error = %v", err)
+	}
+}
+
+func TestUnaryInterceptorClassifiesEveryRegisteredRPC(t *testing.T) {
+	public := []string{
+		pb.AuthService_Login_FullMethodName,
+		pb.AuthService_VerifyMFA_FullMethodName,
+		pb.AuthService_RefreshToken_FullMethodName,
+		pb.AuthService_RequestPasswordReset_FullMethodName,
+		pb.AuthService_ResetPassword_FullMethodName,
+		pb.UserService_CreatePersonalUser_FullMethodName,
+		pb.UserService_CreateCompanyAndOwner_FullMethodName,
+	}
+	for _, method := range public {
+		t.Run("public "+method, func(t *testing.T) {
+			_, err := Unary(interceptorTokenServiceStub{err: errors.New("must not validate")})(context.Background(), nil, &grpc.UnaryServerInfo{FullMethod: method}, func(context.Context, any) (any, error) { return nil, nil })
+			if err != nil {
+				t.Fatalf("public method rejected: %v", err)
+			}
+		})
+	}
+
+	protected := []string{
+		pb.SessionService_ListSessions_FullMethodName,
+		pb.SessionService_RevokeSession_FullMethodName,
+		pb.SessionService_RevokeAllSessions_FullMethodName,
+	}
+	for _, method := range protected {
+		t.Run("protected "+method, func(t *testing.T) {
+			_, err := Unary(interceptorTokenServiceStub{})(context.Background(), nil, &grpc.UnaryServerInfo{FullMethod: method}, func(context.Context, any) (any, error) {
+				t.Fatal("protected handler called without credentials")
+				return nil, nil
+			})
+			if status.Code(err) != codes.Unauthenticated {
+				t.Fatalf("status = %s, want %s", status.Code(err), codes.Unauthenticated)
+			}
+		})
 	}
 }

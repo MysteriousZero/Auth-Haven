@@ -28,7 +28,14 @@ The dependency direction is transport → service → domain interfaces → repo
 
 For HTTP, `internal/server/http.go` constructs dependencies and registers routes. Global middleware adds a trace ID, logs the request, and sets CORS headers. Protected groups additionally validate an access token and place `user_id`, `tenant_id`, and `role_id` in the Gin context. Handlers validate transport input, enrich the Go context with client metadata, call a service, and map domain errors to HTTP responses.
 
-For gRPC, `internal/server/grpc.go` registers protobuf services. Unary interceptors currently log calls and authenticate protected methods. The validation interceptor is a placeholder. Authentication claims are injected into `context.Context` for handlers and services.
+For gRPC, `internal/server/grpc.go` registers AuthService, UserService, and
+SessionService. Auth login, MFA verification, refresh-token rotation, password
+reset, registration, and session operations delegate to the same domain
+services used by HTTP. Unary interceptors log calls and authenticate every
+SessionService method; AuthService and UserService methods are public. The
+validation interceptor remains a placeholder, so handlers validate equivalent
+domain request models before invoking services. Authentication claims are
+injected into `context.Context` for handlers and services.
 
 ## Persistence and caching
 

@@ -25,6 +25,8 @@ func StartGRPC(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 	authRepo := repository.NewAuthRepository(db)
 	mfaRepo := repository.NewMFAMethodRepository(db)
 	auditRepo := repository.NewAuditRepository(db)
+	passwordResetRepo := repository.NewPasswordResetRepository(db)
+	deviceRepo := repository.NewDeviceRepository(db)
 
 	// Initialize services
 	hasher := service.NewHasher()
@@ -59,9 +61,19 @@ func StartGRPC(cfg *config.Config, db *sql.DB, tokenService interfaces.TokenServ
 		auditRepo,
 		service.NewDomainChecker(),
 	)
+	passwordService := service.NewPasswordService(
+		userRepo,
+		passwordResetRepo,
+		authRepo,
+		hasher,
+		tokenService,
+		auditRepo,
+		service.NewEmailProvider(cfg.Email.SMTPHost, cfg.Email.SMTPPort, cfg.Email.Username, cfg.Email.Password, cfg.Email.From, cfg.Email.BaseURL),
+	)
+	sessionService := service.NewSessionService(authRepo, deviceRepo, userRepo, auditRepo)
 
 	// Initialize gRPC handler
-	grpcHandler := handlers.NewGRPCHandler(authService, registrationService, nil, nil, tokenService)
+	grpcHandler := handlers.NewGRPCHandler(authService, registrationService, passwordService, sessionService)
 
 	lis, err := net.Listen("tcp", cfg.Server.GRPCPort)
 	if err != nil {

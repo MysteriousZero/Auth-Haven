@@ -41,6 +41,14 @@ Confirm generated package paths and compile the repository after regeneration. `
 - Decide explicitly whether the method is public in `internal/server/interceptors.go`.
 - Wire any required service in `internal/server/grpc.go`.
 
+The registered gRPC contract intentionally includes login, MFA verification,
+refresh-token rotation, password reset, individual/organization registration,
+and authenticated session management. Token revocation by raw refresh token and
+token introspection were removed before a stable release because no matching
+domain operation or authorization policy exists; use session revocation and
+refresh-token rotation instead. Any future RPC must be implemented and assigned
+an explicit public or protected classification in the same change.
+
 ## Known development hazards
 
 - Documentation and implementation can drift; verify registered routes and constructed dependencies.
