@@ -13,7 +13,7 @@ This document combines the project's security, validation, caching, JWT, and aud
 - Redis supports selected cache-aside repositories and endpoint rate limits.
 - Request IDs and client metadata are propagated for audit records.
 
-Known gaps—including permissive CORS, incomplete gRPC validation, ephemeral signing-key fallback, and incomplete security tests—are tracked in [`PROJECT.md`](../PROJECT.md#known-gaps).
+Remaining gaps—including incomplete gRPC validation and broader security-test coverage—are tracked in [`PROJECT.md`](../PROJECT.md#known-gaps).
 
 ## Authentication and token rules
 
