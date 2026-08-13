@@ -48,7 +48,6 @@ When these disagree, treat the disagreement as drift to resolve—not as permiss
 
 - The gRPC validation interceptor is a pass-through.
 - Role services are not wired to HTTP routes.
-- Token TTL configuration is not consistently consumed by token-generation code.
 - Critical authentication and tenant-isolation paths have regression coverage; broader transaction, concurrency, transport-parity, and SMS MFA branches remain.
 
 ## Roadmap
