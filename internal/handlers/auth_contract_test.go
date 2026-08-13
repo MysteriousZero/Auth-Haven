@@ -21,12 +21,21 @@ import (
 
 type authServiceStub struct {
 	interfaces.AuthService
-	loginResult *models.LoginResult
-	loginErr    error
-	refreshPair *models.TokenPair
-	refreshErr  error
-	refreshRaw  string
-	logoutAllID string
+	loginResult  *models.LoginResult
+	loginErr     error
+	refreshPair  *models.TokenPair
+	refreshErr   error
+	refreshRaw   string
+	logoutAllID  string
+	verifyResult *models.LoginResult
+	verifyErr    error
+	verifyToken  string
+	verifyCode   string
+}
+
+func (s *authServiceStub) VerifyMFA(_ context.Context, token, code string) (*models.LoginResult, error) {
+	s.verifyToken, s.verifyCode = token, code
+	return s.verifyResult, s.verifyErr
 }
 
 func (s *authServiceStub) LogoutAll(_ context.Context, userID string) error {
@@ -64,12 +73,22 @@ func (s *authServiceStub) RefreshToken(_ context.Context, raw string) (*models.T
 
 type passwordServiceStub struct {
 	interfaces.PasswordService
-	err   error
-	calls int
+	err         error
+	calls       int
+	tenantID    string
+	email       string
+	resetToken  string
+	newPassword string
 }
 
-func (s *passwordServiceStub) RequestPasswordReset(context.Context, string, string) error {
+func (s *passwordServiceStub) RequestPasswordReset(_ context.Context, tenantID, email string) error {
 	s.calls++
+	s.tenantID, s.email = tenantID, email
+	return s.err
+}
+
+func (s *passwordServiceStub) ResetPassword(_ context.Context, token, password string) error {
+	s.resetToken, s.newPassword = token, password
 	return s.err
 }
 
@@ -123,23 +142,49 @@ func TestForgotPasswordAlwaysReturnsNoContent(t *testing.T) {
 
 func TestGRPCRefreshTokenContractAndErrorMapping(t *testing.T) {
 	service := &authServiceStub{refreshPair: &models.TokenPair{AccessToken: "access", RefreshToken: "rotated"}}
-	handler := NewGRPCHandler(service, nil, nil, nil, nil)
-	response, err := handler.RefreshToken(context.Background(), &pb.RefreshTokenRequest{RefreshToken: "old"})
-	if err != nil || response.GetAccessToken() != "access" || response.GetRefreshToken() != "rotated" || service.refreshRaw != "old" {
+	handler := NewGRPCHandler(service, nil, nil, nil)
+	raw := "old-refresh-token-with-at-least-32-bytes"
+	response, err := handler.RefreshToken(context.Background(), &pb.RefreshTokenRequest{RefreshToken: raw})
+	if err != nil || response.GetAccessToken() != "access" || response.GetRefreshToken() != "rotated" || service.refreshRaw != raw {
 		t.Fatalf("RefreshToken() = %#v, %v; raw = %q", response, err, service.refreshRaw)
 	}
 
 	service.refreshErr = domainerrors.ErrInvalidToken
-	_, err = handler.RefreshToken(context.Background(), &pb.RefreshTokenRequest{RefreshToken: "replayed"})
+	_, err = handler.RefreshToken(context.Background(), &pb.RefreshTokenRequest{RefreshToken: "replayed-refresh-token-at-least-32-bytes"})
 	if status.Code(err) != codes.Unauthenticated {
 		t.Fatalf("RefreshToken() status = %s, want %s", status.Code(err), codes.Unauthenticated)
+	}
+}
+
+func TestGRPCAuthMethodsMatchHTTPBehavior(t *testing.T) {
+	auth := &authServiceStub{verifyResult: &models.LoginResult{AccessToken: "access", RefreshToken: "refresh", SessionID: "session"}}
+	password := &passwordServiceStub{err: errors.New("account or delivery unavailable")}
+	handler := NewGRPCHandler(auth, nil, password, nil)
+
+	verifyToken := "temporary-token-with-at-least-32-bytes"
+	verify, err := handler.VerifyMFA(context.Background(), &pb.VerifyMFARequest{TempToken: verifyToken, Code: "123456"})
+	if err != nil || verify.GetAccessToken() != "access" || auth.verifyToken != verifyToken || auth.verifyCode != "123456" {
+		t.Fatalf("VerifyMFA() = %#v, %v; token=%q code=%q", verify, err, auth.verifyToken, auth.verifyCode)
+	}
+
+	tenantID := "70b6ff0a-3671-4e10-b78f-14f05fb9a169"
+	forgot, err := handler.RequestPasswordReset(context.Background(), &pb.RequestPasswordResetRequest{TenantId: tenantID, Email: "unknown@example.com"})
+	if err != nil || !forgot.GetSuccess() || password.calls != 1 || password.tenantID != tenantID {
+		t.Fatalf("RequestPasswordReset() = %#v, %v; calls=%d tenant=%q", forgot, err, password.calls, password.tenantID)
+	}
+
+	password.err = nil
+	resetToken := "password-reset-token-with-at-least-32-bytes"
+	reset, err := handler.ResetPassword(context.Background(), &pb.ResetPasswordRequest{Token: resetToken, NewPassword: "New-secure-password1!"})
+	if err != nil || !reset.GetSuccess() || password.resetToken != resetToken {
+		t.Fatalf("ResetPassword() = %#v, %v; token=%q", reset, err, password.resetToken)
 	}
 }
 
 func TestGRPCSessionContractsEnforceAuthenticatedOwner(t *testing.T) {
 	auth := &authServiceStub{}
 	sessions := &sessionServiceStub{sessions: []models.Session{{SessionID: "session-a", UserID: "user-a"}}}
-	handler := NewGRPCHandler(auth, nil, nil, sessions, nil)
+	handler := NewGRPCHandler(auth, nil, nil, sessions)
 	ctx := context.WithValue(context.Background(), "user-id", "user-a")
 
 	_, err := handler.ListSessions(ctx, &pb.ListSessionsRequest{UserId: "user-b"})

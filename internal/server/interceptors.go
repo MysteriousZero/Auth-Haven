@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"auth-haven/internal/domain/interfaces"
+	pb "auth-haven/pkg/proto"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -30,13 +31,13 @@ func Unary(tokenService interfaces.TokenService) grpc.UnaryServerInterceptor {
 
 		// Check if this is a public endpoint that doesn't require authentication
 		publicMethods := map[string]bool{
-			"/auth.AuthService/Login":                 true,
-			"/auth.AuthService/RefreshToken":          true,
-			"/auth.AuthService/RequestPasswordReset":  true,
-			"/auth.AuthService/ResetPassword":         true,
-			"/auth.AuthService/IntrospectToken":       true,
-			"/auth.UserService/CreatePersonalUser":    true,
-			"/auth.UserService/CreateCompanyAndOwner": true,
+			pb.AuthService_Login_FullMethodName:                 true,
+			pb.AuthService_VerifyMFA_FullMethodName:             true,
+			pb.AuthService_RefreshToken_FullMethodName:          true,
+			pb.AuthService_RequestPasswordReset_FullMethodName:  true,
+			pb.AuthService_ResetPassword_FullMethodName:         true,
+			pb.UserService_CreatePersonalUser_FullMethodName:    true,
+			pb.UserService_CreateCompanyAndOwner_FullMethodName: true,
 		}
 
 		// JWT Authentication for protected endpoints

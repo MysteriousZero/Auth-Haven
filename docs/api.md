@@ -58,14 +58,23 @@ Common JSON fields are defined in `internal/domain/models`. Login uses `tenant_i
 
 The server registers `auth.AuthService`, `auth.UserService`, and `auth.SessionService` on port `50051` by default. Send access tokens as `authorization: Bearer <token>` metadata for protected methods. Protobuf sources are under `api/proto/`.
 
-Handler methods that correctly override the generated contracts are:
+Public RPCs are:
 
 - `AuthService.Login`
+- `AuthService.VerifyMFA`
 - `AuthService.RefreshToken`
+- `AuthService.RequestPasswordReset`
+- `AuthService.ResetPassword`
 - `UserService.CreatePersonalUser`
 - `UserService.CreateCompanyAndOwner`
+
+Protected RPCs are:
+
 - `SessionService.ListSessions`
 - `SessionService.RevokeSession`
 - `SessionService.RevokeAllSessions`
 
-The other declared AuthService methods are not implemented. Calls to those methods return gRPC `Unimplemented` rather than invoking domain behavior.
+Every RPC in the registered protobuf services has an intentional handler. Token
+revocation by raw refresh token and token introspection are not part of the
+current contract; clients should use authenticated session revocation and
+refresh-token rotation.

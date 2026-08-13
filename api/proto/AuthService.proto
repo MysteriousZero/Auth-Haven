@@ -11,8 +11,6 @@ service AuthService {
   rpc RefreshToken(RefreshTokenRequest) returns (common.Tokens);
   rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
-  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
-  rpc IntrospectToken(IntrospectTokenRequest) returns (IntrospectTokenResponse);
 }
 
 // Login
@@ -55,14 +53,6 @@ message ResetPasswordRequest {
 }
 
 
-message RevokeTokenRequest {
-  string refresh_token = 1;
-}
-
-message IntrospectTokenRequest {
-  string token = 1; // could be access or refresh token
-}
-
 message RequestPasswordResetResponse {
   bool success = 1;
 }
@@ -70,16 +60,4 @@ message RequestPasswordResetResponse {
 
 message ResetPasswordResponse {
   bool success = 1;
-}
-
-message RevokeTokenResponse {
-  bool success = 1;
-}
-
-message IntrospectTokenResponse {
-  bool active = 1;
-  string user_id = 2;
-  string tenant_id = 3;
-  repeated string roles = 4;
-  int64 expires_at = 5;
 }
